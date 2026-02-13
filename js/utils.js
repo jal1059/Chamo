@@ -3,7 +3,7 @@
 const utils = {
     // Generate a random lobby code
     generateLobbyCode() {
-        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let code = '';
         for (let i = 0; i < gameConfig.lobbyCodeLength; i++) {
             code += characters.charAt(Math.floor(Math.random() * characters.length));
@@ -39,6 +39,9 @@ const utils = {
         const trimmedCode = code.trim().toUpperCase();
         if (trimmedCode.length !== gameConfig.lobbyCodeLength) {
             return { valid: false, error: `Code must be ${gameConfig.lobbyCodeLength} characters` };
+        }
+        if (!/^[A-Z]+$/.test(trimmedCode)) {
+            return { valid: false, error: 'Code must contain letters only' };
         }
         return { valid: true, code: trimmedCode };
     },

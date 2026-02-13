@@ -113,7 +113,7 @@ const App = {
 
         // Auto-uppercase lobby code input
         document.getElementById('lobby-code')?.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase();
+            e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
         });
 
         // Handle page visibility change (tab switching)
