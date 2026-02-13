@@ -299,17 +299,43 @@ const UIManager = {
 
         resultsDisplay.innerHTML = '';
 
+        const isChameleon = results.chameleonId === GameState.playerId;
+        const didWin = isChameleon ? !results.chameleonCaught : results.chameleonCaught;
+
+        // Personalized outcome banner (top)
+        const outcomeBanner = document.createElement('div');
+        outcomeBanner.className = 'result-section';
+
+        const outcomeTitle = document.createElement('div');
+        outcomeTitle.className = `result-outcome-title ${didWin ? 'winner-text' : 'loser-text'}`;
+        outcomeTitle.textContent = didWin ? 'You Won!' : 'You Lost';
+
+        const outcomeContent = document.createElement('div');
+        outcomeContent.className = 'result-content';
+        if (isChameleon) {
+            outcomeContent.textContent = didWin
+                ? '🦎 You escaped detection as the Chameleon!'
+                : '🕵️ You were caught as the Chameleon.';
+        } else {
+            outcomeContent.textContent = didWin
+                ? '🎉 Your team caught the Chameleon!'
+                : '😵 The Chameleon escaped this round.';
+        }
+
+        outcomeBanner.appendChild(outcomeTitle);
+        outcomeBanner.appendChild(outcomeContent);
+
         // Chameleon reveal
         const chameleonSection = document.createElement('div');
         chameleonSection.className = 'result-section';
         
         const chameleonTitle = document.createElement('div');
         chameleonTitle.className = 'result-title';
-        chameleonTitle.textContent = 'The Chameleon was:';
+        chameleonTitle.textContent = isChameleon ? 'You were the Chameleon:' : 'The Chameleon was:';
         
         const chameleonName = document.createElement('div');
         chameleonName.className = 'result-content';
-        chameleonName.textContent = `🦎 ${results.chameleonName}`;
+        chameleonName.textContent = isChameleon ? '🦎 You' : `🦎 ${results.chameleonName}`;
         
         chameleonSection.appendChild(chameleonTitle);
         chameleonSection.appendChild(chameleonName);
@@ -335,45 +361,18 @@ const UIManager = {
         
         const votedTitle = document.createElement('div');
         votedTitle.className = 'result-title';
-        votedTitle.textContent = 'Players voted for:';
+        votedTitle.textContent = results.mostVotedId === GameState.playerId ? 'Players voted for you:' : 'Players voted for:';
         
         const votedContent = document.createElement('div');
         votedContent.className = 'result-content';
-        votedContent.textContent = results.mostVotedName;
+        votedContent.textContent = results.mostVotedId === GameState.playerId ? 'You' : results.mostVotedName;
         
         votedSection.appendChild(votedTitle);
         votedSection.appendChild(votedContent);
-
-        // Outcome
-        const outcomeSection = document.createElement('div');
-        outcomeSection.className = 'result-section';
-
-        const isChameleon = results.chameleonId === GameState.playerId;
-        const didWin = isChameleon ? !results.chameleonCaught : results.chameleonCaught;
-
-        const outcomeTitle = document.createElement('div');
-        outcomeTitle.className = 'result-title';
-        outcomeTitle.textContent = didWin ? 'You Won!' : 'You Lost';
-        
-        const outcomeContent = document.createElement('div');
-        outcomeContent.className = `result-content ${results.chameleonCaught ? 'winner-text' : 'loser-text'}`;
-        if (isChameleon) {
-            outcomeContent.textContent = didWin
-                ? '🦎 You escaped detection as the Chameleon!'
-                : '🕵️ You were caught as the Chameleon.';
-        } else {
-            outcomeContent.textContent = didWin
-                ? '🎉 Your team caught the Chameleon!'
-                : '😵 The Chameleon escaped this round.';
-        }
-        
-        outcomeSection.appendChild(outcomeTitle);
-        outcomeSection.appendChild(outcomeContent);
-
+        resultsDisplay.appendChild(outcomeBanner);
         resultsDisplay.appendChild(chameleonSection);
         resultsDisplay.appendChild(wordSection);
         resultsDisplay.appendChild(votedSection);
-        resultsDisplay.appendChild(outcomeSection);
     },
 
     // Update results action buttons based on host role
