@@ -338,20 +338,17 @@ const LobbyManager = {
             voteCounts[topic] = (voteCounts[topic] || 0) + 1;
         });
 
-        // Find topic with most votes
-        let selectedTopic = topics[0];
-        let maxVotes = 0;
-        
-        Object.entries(voteCounts).forEach(([topic, count]) => {
-            if (count > maxVotes) {
-                maxVotes = count;
-                selectedTopic = topic;
-            }
-        });
+        // Find top-voted topics and randomly break ties
+        const maxVotes = Math.max(...Object.values(voteCounts));
+        const topTopics = Object.entries(voteCounts)
+            .filter(([, count]) => count === maxVotes)
+            .map(([topic]) => topic);
+        const selectedTopic = utils.getRandomElement(topTopics);
 
         // Randomly assign chameleon
         const playerIds = players.map(p => p.id);
-        const chameleonId = utils.getRandomElement(playerIds);
+        const shuffledPlayerIds = utils.shuffleArray(playerIds);
+        const chameleonId = shuffledPlayerIds[0];
 
         // Get random secret word from selected topic
         const words = gameConfig.topics[selectedTopic];
