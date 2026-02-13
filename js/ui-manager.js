@@ -335,10 +335,12 @@ const UIManager = {
         
         const chameleonName = document.createElement('div');
         chameleonName.className = 'result-content';
-        chameleonName.textContent = isChameleon ? '🦎 That was you' : `🦎 ${results.chameleonName}`;
+        chameleonName.textContent = `🦎 ${results.chameleonName}`;
         
         chameleonSection.appendChild(chameleonTitle);
-        chameleonSection.appendChild(chameleonName);
+        if (!isChameleon) {
+            chameleonSection.appendChild(chameleonName);
+        }
 
         // Secret word
         const wordSection = document.createElement('div');
