@@ -90,6 +90,20 @@ If this is your first deployment in this repo, the required hosting config files
 - `firebase.json`
 - `.firebaserc`
 
+#### Option 4: Auto-deploy on push (GitHub Actions)
+
+This repo includes `.github/workflows/firebase-hosting-deploy.yml` to deploy Hosting automatically when you push to `main`.
+
+One-time setup:
+1. In Firebase Console, go to **Project Settings → Service accounts**.
+2. Click **Generate new private key** and download the JSON file.
+3. In GitHub, open your repo → **Settings → Secrets and variables → Actions**.
+4. Add a **New repository secret** named:
+  - `FIREBASE_SERVICE_ACCOUNT_CHAMELEON_C5230`
+5. Paste the entire service account JSON as the secret value.
+
+After that, every push to `main` triggers deploy automatically.
+
 ## 📁 Project Structure
 
 ```
