@@ -18,7 +18,9 @@ const gameConfig = {
     minDiscussionBeforeVote: 15, // minimum seconds before players can click Ready to Vote
     discussionTime: 180, // 3 minutes in seconds
     voteLockTime: 15, // seconds players must wait before voting opens
-    lobbyCodeLength: 3,
+    lobbyCodeLength: 6,
+    lobbyCodeMinLength: 3,
+    lobbyCodeMaxLength: 8,
     
     // Available topics with their associated words
     topics: {

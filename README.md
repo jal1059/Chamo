@@ -136,6 +136,7 @@ Chamo/
 - ✅ Player voting phase
 - ✅ Results reveal
 - ✅ Play again functionality
+- ✅ Host skip-round control during discussion
 - ✅ Session restoration on page refresh
 
 ## 🎨 Customization
@@ -159,8 +160,13 @@ Modify game parameters in `js/config.js`:
 const gameConfig = {
     minPlayers: 3,           // Minimum players to start
     maxPlayers: 8,           // Maximum players in lobby
+  roleRevealTime: 12,      // Role reveal auto-hide time (seconds)
+  minDiscussionBeforeVote: 15, // Minimum discussion before Ready to Vote
     discussionTime: 180,     // Discussion time in seconds
-    lobbyCodeLength: 6,      // Length of lobby codes
+  voteLockTime: 15,        // Delay before voting opens
+  lobbyCodeLength: 6,      // Default generated lobby code length
+  lobbyCodeMinLength: 3,   // Minimum allowed lobby code length
+  lobbyCodeMaxLength: 8,   // Maximum allowed lobby code length
     // ...
 };
 ```

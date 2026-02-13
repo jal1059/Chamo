@@ -37,8 +37,15 @@ const utils = {
             return { valid: false, error: 'Code is required' };
         }
         const trimmedCode = code.trim().toUpperCase();
-        if (trimmedCode.length !== gameConfig.lobbyCodeLength) {
-            return { valid: false, error: `Code must be ${gameConfig.lobbyCodeLength} characters` };
+        const minLength = gameConfig.lobbyCodeMinLength || 3;
+        const maxLength = gameConfig.lobbyCodeMaxLength || gameConfig.lobbyCodeLength || 8;
+
+        if (trimmedCode.length < minLength) {
+            return { valid: false, error: `Code must be at least ${minLength} characters` };
+        }
+
+        if (trimmedCode.length > maxLength) {
+            return { valid: false, error: `Code must be at most ${maxLength} characters` };
         }
         if (!/^[A-Z]+$/.test(trimmedCode)) {
             return { valid: false, error: 'Code must contain letters only' };
