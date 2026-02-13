@@ -3,56 +3,165 @@
 const GameManager = {
     discussionTimer: null,
     discussionTimeLeft: 0,
+    discussionStartAt: null,
+    votingLockTimer: null,
 
     // Continue from role reveal to discussion
-    continueFromReveal() {
-        const topic = GameState.getSelectedTopic();
-        UIManager.updateCurrentTopic(topic);
-        
-        // Start discussion phase
-        this.startDiscussionPhase();
-        UIManager.showScreen('discussion-screen');
-    },
+    async continueFromReveal() {
+        const game = GameState.lobbyData?.game || {};
 
-    // Start discussion phase with timer
-    startDiscussionPhase() {
-        this.discussionTimeLeft = gameConfig.discussionTime;
-        UIManager.updateDiscussionTimer(this.discussionTimeLeft);
-
-        // Clear any existing timer
-        if (this.discussionTimer) {
-            clearInterval(this.discussionTimer);
+        if (game.discussionStartedAt) {
+            return;
         }
 
-        // Start countdown
-        this.discussionTimer = setInterval(() => {
-            this.discussionTimeLeft--;
+        if (!GameState.isHost) {
+            UIManager.showToast('Waiting for host to start discussion', 'error');
+            return;
+        }
+
+        UIManager.showLoading();
+        const result = await FirebaseManager.startDiscussion(GameState.lobbyCode);
+        UIManager.hideLoading();
+
+        if (!result.success) {
+            UIManager.showToast(result.error || 'Failed to start discussion', 'error');
+        }
+    },
+
+    // Start discussion phase with synchronized timer
+    startDiscussionPhase(discussionStartedAt, discussionDuration = gameConfig.discussionTime) {
+        if (!discussionStartedAt) return;
+
+        if (this.discussionTimer && this.discussionStartAt === discussionStartedAt) {
+            return;
+        }
+
+        this.discussionStartAt = discussionStartedAt;
+
+        const updateTimer = () => {
+            const endTime = discussionStartedAt + (discussionDuration * 1000);
+            const remainingMs = endTime - Date.now();
+            this.discussionTimeLeft = Math.max(0, Math.ceil(remainingMs / 1000));
             UIManager.updateDiscussionTimer(this.discussionTimeLeft);
 
             if (this.discussionTimeLeft <= 0) {
-                clearInterval(this.discussionTimer);
-                this.discussionTimer = null;
-                // Auto-advance to voting
+                this.stopDiscussionTimer();
                 this.readyToVote();
             }
+        };
+
+        // Clear any existing timer
+        this.stopDiscussionTimer();
+
+        updateTimer();
+
+        // Start countdown
+        this.discussionTimer = setInterval(() => {
+            updateTimer();
         }, 1000);
     },
 
-    // Player indicates ready to vote
-    readyToVote() {
+    // Stop current discussion timer
+    stopDiscussionTimer() {
         if (this.discussionTimer) {
             clearInterval(this.discussionTimer);
             this.discussionTimer = null;
         }
+        this.discussionStartAt = null;
+    },
+
+    // Get remaining voting lock time in seconds
+    getVoteLockRemainingSeconds() {
+        const game = GameState.lobbyData?.game;
+        if (!game?.votingOpenedAt) {
+            return 0;
+        }
+
+        const voteLockTime = game.voteLockTime || gameConfig.voteLockTime;
+        const lockAnchor = game.discussionStartedAt || game.votingOpenedAt;
+        const voteUnlockAt = lockAnchor + (voteLockTime * 1000);
+        const remainingMs = voteUnlockAt - Date.now();
+
+        return Math.max(0, Math.ceil(remainingMs / 1000));
+    },
+
+    // Start/update voting lock countdown text
+    startVotingLockCountdown(votedCount, totalCount) {
+        const updateStatus = () => {
+            const game = GameState.lobbyData?.game;
+            if (!game?.votingOpenedAt) {
+                const statusElement = document.getElementById('vote-status-text');
+                if (statusElement) {
+                    statusElement.textContent = `Waiting for voting to open... (${votedCount}/${totalCount} votes)`;
+                }
+                return;
+            }
+
+            const remaining = this.getVoteLockRemainingSeconds();
+            if (remaining > 0) {
+                const statusElement = document.getElementById('vote-status-text');
+                if (statusElement) {
+                    statusElement.textContent = `Voting opens in ${remaining}s (${votedCount}/${totalCount} votes)`;
+                }
+                return;
+            }
+
+            UIManager.updateVoteStatus(votedCount, totalCount);
+            this.stopVotingLockCountdown();
+        };
+
+        updateStatus();
+
+        if (this.votingLockTimer) {
+            return;
+        }
+
+        this.votingLockTimer = setInterval(() => {
+            updateStatus();
+        }, 1000);
+    },
+
+    // Stop voting lock countdown
+    stopVotingLockCountdown() {
+        if (this.votingLockTimer) {
+            clearInterval(this.votingLockTimer);
+            this.votingLockTimer = null;
+        }
+    },
+
+    // Player indicates ready to vote
+    async readyToVote() {
+        this.stopDiscussionTimer();
 
         // Show voting screen
         const players = GameState.getPlayers();
+        const votes = GameState.lobbyData?.game?.playerVotes || {};
         UIManager.updateVotingPlayersList(players);
         UIManager.showScreen('voting-screen');
+
+        const votedCount = Object.keys(votes).length;
+        this.startVotingLockCountdown(votedCount, players.length);
+
+        const result = await FirebaseManager.openVotingPhase(GameState.lobbyCode);
+        if (!result.success) {
+            UIManager.showToast(result.error || 'Failed to open voting phase', 'error');
+        }
     },
 
     // Vote for a player
     async votePlayer(playerId) {
+        const game = GameState.lobbyData?.game;
+        if (!game?.votingOpenedAt) {
+            UIManager.showToast('Voting has not opened yet', 'error');
+            return;
+        }
+
+        const voteLockRemaining = this.getVoteLockRemainingSeconds();
+        if (voteLockRemaining > 0) {
+            UIManager.showToast(`You can vote in ${voteLockRemaining}s`, 'error');
+            return;
+        }
+
         const result = await FirebaseManager.submitPlayerVote(
             GameState.lobbyCode,
             GameState.playerId,
@@ -118,6 +227,9 @@ const GameManager = {
             return;
         }
 
+        this.stopDiscussionTimer();
+        this.stopVotingLockCountdown();
+
         UIManager.showLoading();
 
         const result = await FirebaseManager.resetGame(GameState.lobbyCode);
@@ -134,6 +246,8 @@ const GameManager = {
 
     // Exit to main menu
     exitToMenu() {
+        this.stopDiscussionTimer();
+        this.stopVotingLockCountdown();
         LobbyManager.exitToMenu();
     }
 };

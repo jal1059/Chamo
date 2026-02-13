@@ -2,10 +2,58 @@
 
 const FirebaseManager = {
     db: null,
+    requestTimeoutMs: 10000,
+
+    // Validate Firebase config values are set
+    hasValidConfig() {
+        const requiredKeys = [
+            'apiKey',
+            'authDomain',
+            'databaseURL',
+            'projectId',
+            'storageBucket',
+            'messagingSenderId',
+            'appId'
+        ];
+
+        if (!firebaseConfig) return false;
+
+        return requiredKeys.every((key) => {
+            const value = firebaseConfig[key];
+            return typeof value === 'string' &&
+                value.trim().length > 0 &&
+                !value.includes('YOUR_');
+        });
+    },
+
+    // Ensure database is available before making calls
+    ensureDb() {
+        return !!this.db;
+    },
+
+    // Add timeout to Firebase operations to avoid hanging UI
+    withTimeout(promise, operation, timeoutMs = this.requestTimeoutMs) {
+        let timeoutId;
+
+        const timeoutPromise = new Promise((_, reject) => {
+            timeoutId = setTimeout(() => {
+                reject(new Error(`${operation} timed out. Check Firebase configuration/network.`));
+            }, timeoutMs);
+        });
+
+        return Promise.race([promise, timeoutPromise]).finally(() => {
+            clearTimeout(timeoutId);
+        });
+    },
     
     // Initialize Firebase
     init() {
         try {
+            if (!this.hasValidConfig()) {
+                UIManager.showToast('Firebase is not configured. Update js/config.js', 'error');
+                return false;
+            }
+
             firebase.initializeApp(firebaseConfig);
             this.db = firebase.database();
             console.log('Firebase initialized successfully');
@@ -20,9 +68,13 @@ const FirebaseManager = {
     // Create a new lobby
     async createLobby(lobbyCode, hostId, hostName) {
         try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
             const lobbyRef = this.db.ref(`lobbies/${lobbyCode}`);
             
-            await lobbyRef.set({
+            await this.withTimeout(lobbyRef.set({
                 host: hostId,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 status: 'waiting', // waiting, voting, playing, finished
@@ -33,7 +85,7 @@ const FirebaseManager = {
                         joinedAt: firebase.database.ServerValue.TIMESTAMP
                     }
                 }
-            });
+            }), 'Create lobby');
             
             return { success: true };
         } catch (error) {
@@ -45,7 +97,14 @@ const FirebaseManager = {
     // Check if lobby exists
     async lobbyExists(lobbyCode) {
         try {
-            const snapshot = await this.db.ref(`lobbies/${lobbyCode}`).once('value');
+            if (!this.ensureDb()) {
+                return false;
+            }
+
+            const snapshot = await this.withTimeout(
+                this.db.ref(`lobbies/${lobbyCode}`).once('value'),
+                'Check lobby'
+            );
             return snapshot.exists();
         } catch (error) {
             console.error('Error checking lobby:', error);
@@ -56,8 +115,12 @@ const FirebaseManager = {
     // Join an existing lobby
     async joinLobby(lobbyCode, playerId, playerName) {
         try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
             const lobbyRef = this.db.ref(`lobbies/${lobbyCode}`);
-            const snapshot = await lobbyRef.once('value');
+            const snapshot = await this.withTimeout(lobbyRef.once('value'), 'Join lobby');
             
             if (!snapshot.exists()) {
                 return { success: false, error: 'Lobby not found' };
@@ -74,11 +137,11 @@ const FirebaseManager = {
                 return { success: false, error: 'Lobby is full' };
             }
 
-            await lobbyRef.child(`players/${playerId}`).set({
+            await this.withTimeout(lobbyRef.child(`players/${playerId}`).set({
                 name: playerName,
                 isHost: false,
                 joinedAt: firebase.database.ServerValue.TIMESTAMP
-            });
+            }), 'Join lobby');
 
             return { success: true };
         } catch (error) {
@@ -90,8 +153,12 @@ const FirebaseManager = {
     // Leave lobby
     async leaveLobby(lobbyCode, playerId) {
         try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
             const lobbyRef = this.db.ref(`lobbies/${lobbyCode}`);
-            const snapshot = await lobbyRef.once('value');
+            const snapshot = await this.withTimeout(lobbyRef.once('value'), 'Leave lobby');
             
             if (!snapshot.exists()) {
                 return { success: true }; // Already gone
@@ -100,7 +167,7 @@ const FirebaseManager = {
             const lobby = snapshot.val();
             
             // Remove player
-            await lobbyRef.child(`players/${playerId}`).remove();
+            await this.withTimeout(lobbyRef.child(`players/${playerId}`).remove(), 'Leave lobby');
 
             // If host left, assign new host or delete lobby
             if (lobby.host === playerId) {
@@ -108,12 +175,12 @@ const FirebaseManager = {
                 
                 if (remainingPlayers.length === 0) {
                     // No players left, delete lobby
-                    await lobbyRef.remove();
+                    await this.withTimeout(lobbyRef.remove(), 'Delete lobby');
                 } else {
                     // Assign new host
                     const newHostId = remainingPlayers[0];
-                    await lobbyRef.child('host').set(newHostId);
-                    await lobbyRef.child(`players/${newHostId}/isHost`).set(true);
+                    await this.withTimeout(lobbyRef.child('host').set(newHostId), 'Assign host');
+                    await this.withTimeout(lobbyRef.child(`players/${newHostId}/isHost`).set(true), 'Assign host');
                 }
             }
 
@@ -126,6 +193,11 @@ const FirebaseManager = {
 
     // Listen to lobby changes
     watchLobby(lobbyCode, callback) {
+        if (!this.ensureDb()) {
+            callback(null);
+            return () => {};
+        }
+
         const lobbyRef = this.db.ref(`lobbies/${lobbyCode}`);
         lobbyRef.on('value', (snapshot) => {
             if (snapshot.exists()) {
@@ -140,16 +212,20 @@ const FirebaseManager = {
     // Start game (update status and set topics)
     async startGame(lobbyCode, topics) {
         try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
             const lobbyRef = this.db.ref(`lobbies/${lobbyCode}`);
             
-            await lobbyRef.update({
+            await this.withTimeout(lobbyRef.update({
                 status: 'voting',
                 game: {
                     topics: topics,
                     votes: {},
                     startedAt: firebase.database.ServerValue.TIMESTAMP
                 }
-            });
+            }), 'Start game');
 
             return { success: true };
         } catch (error) {
@@ -161,7 +237,14 @@ const FirebaseManager = {
     // Submit topic vote
     async submitTopicVote(lobbyCode, playerId, topic) {
         try {
-            await this.db.ref(`lobbies/${lobbyCode}/game/votes/${playerId}`).set(topic);
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(
+                this.db.ref(`lobbies/${lobbyCode}/game/votes/${playerId}`).set(topic),
+                'Submit topic vote'
+            );
             return { success: true };
         } catch (error) {
             console.error('Error submitting vote:', error);
@@ -172,15 +255,19 @@ const FirebaseManager = {
     // Set selected topic and assign roles
     async setTopicAndRoles(lobbyCode, selectedTopic, chameleonId, secretWord) {
         try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
             const lobbyRef = this.db.ref(`lobbies/${lobbyCode}`);
             
-            await lobbyRef.update({
+            await this.withTimeout(lobbyRef.update({
                 status: 'playing',
                 'game/selectedTopic': selectedTopic,
                 'game/chameleon': chameleonId,
                 'game/secretWord': secretWord,
                 'game/votes': null // Clear votes
-            });
+            }), 'Set topic and roles');
 
             return { success: true };
         } catch (error) {
@@ -189,10 +276,60 @@ const FirebaseManager = {
         }
     },
 
+    // Start synchronized discussion timer
+    async startDiscussion(lobbyCode) {
+        try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(this.db.ref(`lobbies/${lobbyCode}`).update({
+                'game/discussionStartedAt': firebase.database.ServerValue.TIMESTAMP,
+                'game/discussionDuration': gameConfig.discussionTime,
+                'game/voteLockTime': gameConfig.voteLockTime,
+                'game/votingOpenedAt': null,
+                'game/playerVotes': null
+            }), 'Start discussion');
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error starting discussion:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Open voting phase (idempotent)
+    async openVotingPhase(lobbyCode) {
+        try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            const votingRef = this.db.ref(`lobbies/${lobbyCode}/game/votingOpenedAt`);
+            const snapshot = await this.withTimeout(votingRef.once('value'), 'Open voting phase');
+
+            if (!snapshot.exists()) {
+                await this.withTimeout(votingRef.set(firebase.database.ServerValue.TIMESTAMP), 'Open voting phase');
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error opening voting phase:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     // Submit player vote
     async submitPlayerVote(lobbyCode, voterId, votedPlayerId) {
         try {
-            await this.db.ref(`lobbies/${lobbyCode}/game/playerVotes/${voterId}`).set(votedPlayerId);
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(
+                this.db.ref(`lobbies/${lobbyCode}/game/playerVotes/${voterId}`).set(votedPlayerId),
+                'Submit player vote'
+            );
             return { success: true };
         } catch (error) {
             console.error('Error submitting player vote:', error);
@@ -203,10 +340,14 @@ const FirebaseManager = {
     // Set game results
     async setGameResults(lobbyCode, results) {
         try {
-            await this.db.ref(`lobbies/${lobbyCode}`).update({
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(this.db.ref(`lobbies/${lobbyCode}`).update({
                 status: 'finished',
                 'game/results': results
-            });
+            }), 'Set game results');
             return { success: true };
         } catch (error) {
             console.error('Error setting results:', error);
@@ -217,10 +358,14 @@ const FirebaseManager = {
     // Reset game for new round
     async resetGame(lobbyCode) {
         try {
-            await this.db.ref(`lobbies/${lobbyCode}`).update({
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(this.db.ref(`lobbies/${lobbyCode}`).update({
                 status: 'waiting',
                 game: null
-            });
+            }), 'Reset game');
             return { success: true };
         } catch (error) {
             console.error('Error resetting game:', error);

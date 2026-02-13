@@ -1,6 +1,9 @@
 // UI Manager - Handles all UI updates and screen transitions
 
 const UIManager = {
+    roleHideTimer: null,
+    roleHideCountdownTimer: null,
+
     // Show a specific screen
     showScreen(screenId) {
         // Hide all screens
@@ -127,6 +130,15 @@ const UIManager = {
         const roleDisplay = document.getElementById('role-display');
         if (!roleDisplay) return;
 
+        if (this.roleHideTimer) {
+            clearTimeout(this.roleHideTimer);
+            this.roleHideTimer = null;
+        }
+        if (this.roleHideCountdownTimer) {
+            clearInterval(this.roleHideCountdownTimer);
+            this.roleHideCountdownTimer = null;
+        }
+
         roleDisplay.innerHTML = '';
 
         const roleTitle = document.createElement('div');
@@ -162,6 +174,67 @@ const UIManager = {
             roleDisplay.appendChild(topicDiv);
             roleDisplay.appendChild(wordDiv);
             roleDisplay.appendChild(description);
+        }
+
+        const continueBtn = document.getElementById('continue-from-reveal-btn');
+        if (continueBtn) {
+            continueBtn.textContent = 'Continue';
+        }
+
+        const hideNotice = document.createElement('div');
+        hideNotice.className = 'role-hide-notice';
+        roleDisplay.appendChild(hideNotice);
+
+        let secondsLeft = gameConfig.roleRevealTime || 12;
+        const updateHideNotice = () => {
+            hideNotice.textContent = `Role will auto-hide in ${secondsLeft}s`;
+        };
+
+        updateHideNotice();
+        this.roleHideCountdownTimer = setInterval(() => {
+            secondsLeft = Math.max(0, secondsLeft - 1);
+            updateHideNotice();
+            if (secondsLeft <= 0) {
+                clearInterval(this.roleHideCountdownTimer);
+                this.roleHideCountdownTimer = null;
+            }
+        }, 1000);
+
+        this.roleHideTimer = setTimeout(() => {
+            this.hideRoleReveal();
+        }, (gameConfig.roleRevealTime || 12) * 1000);
+    },
+
+    // Hide role details after reveal timeout
+    hideRoleReveal() {
+        const roleDisplay = document.getElementById('role-display');
+        if (!roleDisplay) return;
+
+        if (this.roleHideTimer) {
+            clearTimeout(this.roleHideTimer);
+            this.roleHideTimer = null;
+        }
+        if (this.roleHideCountdownTimer) {
+            clearInterval(this.roleHideCountdownTimer);
+            this.roleHideCountdownTimer = null;
+        }
+
+        roleDisplay.innerHTML = '';
+
+        const hiddenTitle = document.createElement('div');
+        hiddenTitle.className = 'role-title';
+        hiddenTitle.textContent = '🔒 Role Hidden';
+
+        const hiddenText = document.createElement('div');
+        hiddenText.className = 'role-description';
+        hiddenText.textContent = 'Role information is now hidden to prevent peeking.';
+
+        roleDisplay.appendChild(hiddenTitle);
+        roleDisplay.appendChild(hiddenText);
+
+        const continueBtn = document.getElementById('continue-from-reveal-btn');
+        if (continueBtn) {
+            continueBtn.textContent = 'Continue';
         }
     },
 
@@ -274,18 +347,47 @@ const UIManager = {
         // Outcome
         const outcomeSection = document.createElement('div');
         outcomeSection.className = 'result-section';
+
+        const isChameleon = results.chameleonId === GameState.playerId;
+        const didWin = isChameleon ? !results.chameleonCaught : results.chameleonCaught;
+
+        const outcomeTitle = document.createElement('div');
+        outcomeTitle.className = 'result-title';
+        outcomeTitle.textContent = didWin ? 'You Won!' : 'You Lost';
         
         const outcomeContent = document.createElement('div');
         outcomeContent.className = `result-content ${results.chameleonCaught ? 'winner-text' : 'loser-text'}`;
-        outcomeContent.textContent = results.chameleonCaught ? 
-            '🎉 Players Win! Chameleon Caught!' : 
-            '🦎 Chameleon Wins! Escaped Detection!';
+        if (isChameleon) {
+            outcomeContent.textContent = didWin
+                ? '🦎 You escaped detection as the Chameleon!'
+                : '🕵️ You were caught as the Chameleon.';
+        } else {
+            outcomeContent.textContent = didWin
+                ? '🎉 Your team caught the Chameleon!'
+                : '😵 The Chameleon escaped this round.';
+        }
         
+        outcomeSection.appendChild(outcomeTitle);
         outcomeSection.appendChild(outcomeContent);
 
         resultsDisplay.appendChild(chameleonSection);
         resultsDisplay.appendChild(wordSection);
         resultsDisplay.appendChild(votedSection);
         resultsDisplay.appendChild(outcomeSection);
+    },
+
+    // Update results action buttons based on host role
+    updateResultsActions(isHost) {
+        const playAgainBtn = document.getElementById('play-again-btn');
+        if (!playAgainBtn) return;
+
+        if (isHost) {
+            playAgainBtn.disabled = false;
+            playAgainBtn.textContent = 'Play Again';
+            return;
+        }
+
+        playAgainBtn.disabled = true;
+        playAgainBtn.textContent = 'Waiting For Host...';
     }
 };

@@ -1,20 +1,22 @@
 // Firebase Configuration
 // Replace these values with your actual Firebase project credentials
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyAKbry-LtdWXLqTRxf5MmR5-t0aKi7G7Uk",
+    authDomain: "chameleon-c5230.firebaseapp.com",
+    databaseURL: "https://chameleon-c5230-default-rtdb.firebaseio.com",
+    projectId: "chameleon-c5230",
+    storageBucket: "chameleon-c5230.firebasestorage.app",
+    messagingSenderId: "620652027822",
+    appId: "1:620652027822:web:81e2bba1017a61d929f23f"
 };
 
 // Game Configuration
 const gameConfig = {
     minPlayers: 3,
     maxPlayers: 8,
+    roleRevealTime: 12, // seconds role details remain visible
     discussionTime: 180, // 3 minutes in seconds
+    voteLockTime: 15, // seconds players must wait before voting opens
     lobbyCodeLength: 6,
     
     // Available topics with their associated words
