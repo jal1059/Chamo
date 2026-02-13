@@ -331,11 +331,11 @@ const UIManager = {
         
         const chameleonTitle = document.createElement('div');
         chameleonTitle.className = 'result-title';
-        chameleonTitle.textContent = isChameleon ? 'You were the Chameleon:' : 'The Chameleon was:';
+        chameleonTitle.textContent = isChameleon ? 'You were the Chameleon' : 'The Chameleon was:';
         
         const chameleonName = document.createElement('div');
         chameleonName.className = 'result-content';
-        chameleonName.textContent = isChameleon ? '🦎 You' : `🦎 ${results.chameleonName}`;
+        chameleonName.textContent = isChameleon ? '🦎 That was you' : `🦎 ${results.chameleonName}`;
         
         chameleonSection.appendChild(chameleonTitle);
         chameleonSection.appendChild(chameleonName);
