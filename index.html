@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e3a5f">
+    <meta name="description" content="Chameleon - A social deduction game">
+    <title>Chameleon Game</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div id="app" class="app-container">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="screen active">
+            <div class="screen-content">
+                <h1 class="game-title">🦎 Chameleon</h1>
+                <p class="game-subtitle">A Social Deduction Game</p>
+                
+                <div class="button-group">
+                    <button id="create-lobby-btn" class="btn btn-primary">Create Lobby</button>
+                    <button id="join-lobby-btn" class="btn btn-secondary">Join Lobby</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Lobby Screen -->
+        <div id="create-lobby-screen" class="screen">
+            <div class="screen-content">
+                <h2>Create Lobby</h2>
+                <div class="input-group">
+                    <label for="player-name-create">Your Name</label>
+                    <input type="text" id="player-name-create" class="input-field" placeholder="Enter your name" maxlength="20">
+                </div>
+                <div class="button-group">
+                    <button id="confirm-create-btn" class="btn btn-primary">Create Game</button>
+                    <button id="back-from-create-btn" class="btn btn-secondary">Back</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Lobby Screen -->
+        <div id="join-lobby-screen" class="screen">
+            <div class="screen-content">
+                <h2>Join Lobby</h2>
+                <div class="input-group">
+                    <label for="player-name-join">Your Name</label>
+                    <input type="text" id="player-name-join" class="input-field" placeholder="Enter your name" maxlength="20">
+                </div>
+                <div class="input-group">
+                    <label for="lobby-code">Lobby Code</label>
+                    <input type="text" id="lobby-code" class="input-field" placeholder="Enter 6-digit code" maxlength="6">
+                </div>
+                <div class="button-group">
+                    <button id="confirm-join-btn" class="btn btn-primary">Join Game</button>
+                    <button id="back-from-join-btn" class="btn btn-secondary">Back</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lobby Screen -->
+        <div id="lobby-screen" class="screen">
+            <div class="screen-content">
+                <div class="lobby-header">
+                    <h2>Lobby</h2>
+                    <div class="lobby-code-display">
+                        <span class="label">Code:</span>
+                        <span id="display-lobby-code" class="code">------</span>
+                    </div>
+                </div>
+                
+                <div class="players-section">
+                    <h3>Players (<span id="player-count">0</span>)</h3>
+                    <div id="players-list" class="players-list">
+                        <!-- Players will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="lobby-info">
+                    <p class="info-text">Waiting for players... (3-8 players recommended)</p>
+                </div>
+
+                <div class="button-group">
+                    <button id="start-game-btn" class="btn btn-primary" disabled>Start Game</button>
+                    <button id="leave-lobby-btn" class="btn btn-secondary">Leave Lobby</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Topic Voting Screen -->
+        <div id="topic-voting-screen" class="screen">
+            <div class="screen-content">
+                <h2>Choose a Topic</h2>
+                <p class="instruction-text">Vote for your preferred topic category</p>
+                <div id="topics-list" class="topics-list">
+                    <!-- Topics will be added here dynamically -->
+                </div>
+                <div class="voting-status">
+                    <p id="voting-status-text">Waiting for votes...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Reveal Screen -->
+        <div id="role-reveal-screen" class="screen">
+            <div class="screen-content">
+                <div class="reveal-container">
+                    <h2>Your Role</h2>
+                    <div id="role-display" class="role-display">
+                        <!-- Role info will be shown here -->
+                    </div>
+                    <button id="continue-from-reveal-btn" class="btn btn-primary">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discussion Screen -->
+        <div id="discussion-screen" class="screen">
+            <div class="screen-content">
+                <h2>Discussion Phase</h2>
+                <div class="topic-reminder">
+                    <span class="label">Topic:</span>
+                    <span id="current-topic">---</span>
+                </div>
+                <div class="timer-display">
+                    <span id="discussion-timer">--:--</span>
+                </div>
+                <p class="instruction-text">Discuss and figure out who the Chameleon is!</p>
+                <button id="ready-to-vote-btn" class="btn btn-primary">Ready to Vote</button>
+            </div>
+        </div>
+
+        <!-- Voting Screen -->
+        <div id="voting-screen" class="screen">
+            <div class="screen-content">
+                <h2>Vote for the Chameleon</h2>
+                <p class="instruction-text">Who do you think is the Chameleon?</p>
+                <div id="voting-players-list" class="voting-players-list">
+                    <!-- Players to vote for will be added here -->
+                </div>
+                <div class="voting-status">
+                    <p id="vote-status-text">Waiting for all votes...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <div class="screen-content">
+                <h2>Game Results</h2>
+                <div id="results-display" class="results-display">
+                    <!-- Results will be shown here -->
+                </div>
+                <div class="button-group">
+                    <button id="play-again-btn" class="btn btn-primary">Play Again</button>
+                    <button id="exit-to-menu-btn" class="btn btn-secondary">Main Menu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/firebase-manager.js"></script>
+    <script src="js/game-state.js"></script>
+    <script src="js/ui-manager.js"></script>
+    <script src="js/lobby-manager.js"></script>
+    <script src="js/game-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
