@@ -16,6 +16,10 @@ const UIManager = {
         if (screen) {
             screen.classList.add('active');
             GameState.currentScreen = screenId;
+
+            if (typeof TypewriterManager !== 'undefined') {
+                TypewriterManager.animateScreen(screen);
+            }
         }
     },
 
