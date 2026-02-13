@@ -257,6 +257,7 @@ const LobbyManager = {
             if (GameState.currentScreen !== 'discussion-screen') {
                 UIManager.showScreen('discussion-screen');
             }
+            UIManager.updateDiscussionActions(GameState.isHost);
             GameManager.startDiscussionPhase(game.discussionStartedAt, game.discussionDuration || gameConfig.discussionTime);
             return;
         }

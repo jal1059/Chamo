@@ -258,6 +258,18 @@ const UIManager = {
         }
     },
 
+    // Update discussion action controls for host/non-host
+    updateDiscussionActions(isHost) {
+        const skipRoundBtn = document.getElementById('skip-round-btn');
+        if (!skipRoundBtn) return;
+
+        if (isHost) {
+            skipRoundBtn.classList.remove('hidden');
+        } else {
+            skipRoundBtn.classList.add('hidden');
+        }
+    },
+
     // Update voting players list
     updateVotingPlayersList(players, currentVote = null) {
         const listElement = document.getElementById('voting-players-list');

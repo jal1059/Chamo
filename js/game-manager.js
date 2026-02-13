@@ -294,6 +294,28 @@ const GameManager = {
         }
     },
 
+    // Skip current round and return everyone to lobby (host only)
+    async skipRound() {
+        if (!GameState.isHost) {
+            UIManager.showToast('Only host can skip round', 'error');
+            return;
+        }
+
+        this.stopDiscussionTimer();
+        this.stopVotingLockCountdown();
+
+        UIManager.showLoading();
+        const result = await FirebaseManager.resetGame(GameState.lobbyCode);
+        UIManager.hideLoading();
+
+        if (!result.success) {
+            UIManager.showToast(result.error || 'Failed to skip round', 'error');
+            return;
+        }
+
+        UIManager.showToast('Round skipped. Back to lobby.', 'success');
+    },
+
     // Exit to main menu
     exitToMenu() {
         this.stopDiscussionTimer();

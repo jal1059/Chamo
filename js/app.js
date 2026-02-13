@@ -81,6 +81,12 @@ const App = {
             GameManager.readyToVote();
         });
 
+        document.getElementById('skip-round-btn')?.addEventListener('click', () => {
+            if (confirm('Skip this round and return everyone to lobby?')) {
+                GameManager.skipRound();
+            }
+        });
+
         // Results screen
         document.getElementById('play-again-btn')?.addEventListener('click', () => {
             GameManager.playAgain();
