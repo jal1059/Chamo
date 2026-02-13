@@ -73,7 +73,7 @@ const UIManager = {
             
             const nameSpan = document.createElement('span');
             nameSpan.className = 'player-name';
-            nameSpan.textContent = utils.sanitizeHTML(player.name);
+            nameSpan.textContent = player.name;
             
             playerDiv.appendChild(nameSpan);
             listElement.appendChild(playerDiv);
@@ -195,7 +195,7 @@ const UIManager = {
 
             const playerDiv = document.createElement('div');
             playerDiv.className = 'vote-player-item';
-            playerDiv.textContent = utils.sanitizeHTML(player.name);
+            playerDiv.textContent = player.name;
             
             if (currentVote === player.id) {
                 playerDiv.classList.add('selected');
