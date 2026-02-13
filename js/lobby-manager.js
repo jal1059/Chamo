@@ -156,11 +156,25 @@ const LobbyManager = {
 
         // Handle different game states
         if (status === 'voting') {
+            GameManager.stopDiscussionTimer();
+            GameManager.stopVotingLockCountdown();
             this.handleVotingPhase(lobbyData, players);
         } else if (status === 'playing') {
             this.handlePlayingPhase(lobbyData, players);
         } else if (status === 'finished') {
+            GameManager.stopDiscussionTimer();
+            GameManager.stopVotingLockCountdown();
             this.handleFinishedPhase(lobbyData);
+        } else if (status === 'waiting') {
+            GameManager.stopDiscussionTimer();
+            GameManager.stopVotingLockCountdown();
+            this.currentVote = null;
+            UIManager.updateLobbyCode(GameState.lobbyCode);
+            UIManager.showScreen('lobby-screen');
+            UIManager.updatePlayersList(players);
+        } else {
+            GameManager.stopDiscussionTimer();
+            GameManager.stopVotingLockCountdown();
         }
     },
 
@@ -191,6 +205,40 @@ const LobbyManager = {
     // Handle playing phase
     handlePlayingPhase(lobbyData, players) {
         const game = lobbyData.game;
+
+        // Handle player voting
+        if (game.votingOpenedAt || game.playerVotes) {
+            GameManager.stopDiscussionTimer();
+            if (GameState.currentScreen !== 'voting-screen') {
+                UIManager.showScreen('voting-screen');
+                UIManager.updateVotingPlayersList(players);
+            }
+
+            const votes = game.playerVotes || {};
+            const votedCount = Object.keys(votes).length;
+            GameManager.startVotingLockCountdown(votedCount, players.length);
+
+            // Update UI if player has voted
+            if (votes[GameState.playerId]) {
+                UIManager.updateVotingPlayersList(players, votes[GameState.playerId]);
+            }
+
+            // Check if all voted (only host processes)
+            if (GameState.isHost && votedCount === players.length && votedCount > 0) {
+                GameManager.processVotingResults(votes, game.chameleon, players);
+            }
+            return;
+        }
+
+        // Handle synchronized discussion timer phase
+        if (game.discussionStartedAt) {
+            UIManager.updateCurrentTopic(game.selectedTopic);
+            if (GameState.currentScreen !== 'discussion-screen') {
+                UIManager.showScreen('discussion-screen');
+            }
+            GameManager.startDiscussionPhase(game.discussionStartedAt, game.discussionDuration || gameConfig.discussionTime);
+            return;
+        }
         
         // Show role reveal if not seen yet
         if (GameState.currentScreen === 'topic-voting-screen') {
@@ -202,28 +250,6 @@ const LobbyManager = {
             UIManager.showScreen('role-reveal-screen');
             return;
         }
-
-        // Handle player voting
-        if (game.playerVotes) {
-            if (GameState.currentScreen !== 'voting-screen') {
-                UIManager.showScreen('voting-screen');
-                UIManager.updateVotingPlayersList(players);
-            }
-
-            const votes = game.playerVotes || {};
-            const votedCount = Object.keys(votes).length;
-            UIManager.updateVoteStatus(votedCount, players.length);
-
-            // Update UI if player has voted
-            if (votes[GameState.playerId]) {
-                UIManager.updateVotingPlayersList(players, votes[GameState.playerId]);
-            }
-
-            // Check if all voted (only host processes)
-            if (GameState.isHost && votedCount === players.length && votedCount > 0) {
-                GameManager.processVotingResults(votes, game.chameleon, players);
-            }
-        }
     },
 
     // Handle finished phase
@@ -232,6 +258,8 @@ const LobbyManager = {
             UIManager.displayResults(lobbyData.game.results);
             UIManager.showScreen('results-screen');
         }
+
+        UIManager.updateResultsActions(GameState.isHost);
     },
 
     // Start the game (host only)

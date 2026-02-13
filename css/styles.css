@@ -411,6 +411,18 @@ h3 {
     margin-top: var(--spacing-md);
 }
 
+.role-hide-notice {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--accent-color);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* ===========================
    Discussion & Timer
    =========================== */
@@ -498,6 +510,13 @@ h3 {
     font-size: 1.5rem;
     margin-bottom: var(--spacing-sm);
     text-align: center;
+}
+
+.result-outcome-title {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: var(--spacing-sm);
 }
 
 .result-content {
