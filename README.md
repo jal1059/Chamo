@@ -1,10 +1,10 @@
-# 🦎 Chameleon Game
+# 🦎 Chamo Game
 
 A mobile-first multiplayer social deduction game built with HTML, CSS, vanilla JavaScript, and Firebase.
 
 ## 🎮 Game Description
 
-Chameleon is a social deduction game where players try to identify who among them is the "Chameleon" - the only player who doesn't know the secret word. The Chameleon must blend in and avoid detection!
+Chamo is a social deduction game where players try to identify who among them is the "Chameleon" - the only player who doesn't know the secret word. The Chameleon must blend in and avoid detection!
 
 ### How to Play
 
@@ -184,4 +184,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-Enjoy playing Chameleon! 🦎
+Enjoy playing Chamo! 🦎

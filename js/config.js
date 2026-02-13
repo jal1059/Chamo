@@ -15,6 +15,7 @@ const gameConfig = {
     minPlayers: 3,
     maxPlayers: 8,
     roleRevealTime: 12, // seconds role details remain visible
+    minDiscussionBeforeVote: 15, // minimum seconds before players can click Ready to Vote
     discussionTime: 180, // 3 minutes in seconds
     voteLockTime: 15, // seconds players must wait before voting opens
     lobbyCodeLength: 6,
