@@ -41,7 +41,8 @@ const App = {
         // Create lobby screen
         document.getElementById('confirm-create-btn')?.addEventListener('click', () => {
             const nameInput = document.getElementById('player-name-create');
-            LobbyManager.createLobby(nameInput.value);
+            const codeInput = document.getElementById('custom-lobby-code');
+            LobbyManager.createLobby(nameInput.value, codeInput?.value || '');
         });
 
         document.getElementById('back-from-create-btn')?.addEventListener('click', () => {
@@ -94,8 +95,20 @@ const App = {
         // Handle Enter key on input fields
         document.getElementById('player-name-create')?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                const codeInput = document.getElementById('custom-lobby-code');
+                codeInput?.focus();
+            }
+        });
+
+        document.getElementById('custom-lobby-code')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
                 document.getElementById('confirm-create-btn')?.click();
             }
+        });
+
+        // Auto-uppercase/create-only letters for custom lobby code input
+        document.getElementById('custom-lobby-code')?.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
         });
 
         document.getElementById('player-name-join')?.addEventListener('keypress', (e) => {

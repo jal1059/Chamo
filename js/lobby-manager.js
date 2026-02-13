@@ -4,7 +4,7 @@ const LobbyManager = {
     currentVote: null,
 
     // Create a new lobby
-    async createLobby(playerName) {
+    async createLobby(playerName, preferredLobbyCode = '') {
         UIManager.showLoading();
         
         try {
@@ -19,21 +19,42 @@ const LobbyManager = {
             // Initialize player
             GameState.initPlayer(validation.name);
 
-            // Generate unique lobby code
+            // Validate optional custom lobby code from host
+            const trimmedPreferredCode = preferredLobbyCode.trim();
             let lobbyCode;
-            let codeExists = true;
-            let attempts = 0;
-            
-            while (codeExists && attempts < 10) {
-                lobbyCode = utils.generateLobbyCode();
-                codeExists = await FirebaseManager.lobbyExists(lobbyCode);
-                attempts++;
-            }
 
-            if (codeExists) {
-                UIManager.showToast('Failed to generate unique code. Try again.', 'error');
-                UIManager.hideLoading();
-                return;
+            if (trimmedPreferredCode) {
+                const preferredCodeValidation = utils.validateLobbyCode(trimmedPreferredCode);
+                if (!preferredCodeValidation.valid) {
+                    UIManager.showToast(preferredCodeValidation.error, 'error');
+                    UIManager.hideLoading();
+                    return;
+                }
+
+                const codeExists = await FirebaseManager.lobbyExists(preferredCodeValidation.code);
+                if (codeExists) {
+                    UIManager.showToast('That lobby code is already taken. Try another.', 'error');
+                    UIManager.hideLoading();
+                    return;
+                }
+
+                lobbyCode = preferredCodeValidation.code;
+            } else {
+                // Generate unique lobby code
+                let codeExists = true;
+                let attempts = 0;
+
+                while (codeExists && attempts < 10) {
+                    lobbyCode = utils.generateLobbyCode();
+                    codeExists = await FirebaseManager.lobbyExists(lobbyCode);
+                    attempts++;
+                }
+
+                if (codeExists) {
+                    UIManager.showToast('Failed to generate unique code. Try again.', 'error');
+                    UIManager.hideLoading();
+                    return;
+                }
             }
 
             // Create lobby in Firebase
