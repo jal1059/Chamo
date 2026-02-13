@@ -82,9 +82,13 @@ npx http-server -p 8000
 ```bash
 npm install -g firebase-tools
 firebase login
-firebase init hosting
-firebase deploy
+firebase use chameleon-c5230
+firebase deploy --only hosting
 ```
+
+If this is your first deployment in this repo, the required hosting config files are already included:
+- `firebase.json`
+- `.firebaserc`
 
 ## 📁 Project Structure
 
