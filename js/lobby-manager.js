@@ -359,7 +359,16 @@ const LobbyManager = {
     },
 
     // Exit to main menu
-    exitToMenu() {
+    async exitToMenu() {
+        const lobbyCode = GameState.lobbyCode;
+        const playerId = GameState.playerId;
+
+        if (lobbyCode && playerId) {
+            UIManager.showLoading();
+            await FirebaseManager.leaveLobby(lobbyCode, playerId);
+            UIManager.hideLoading();
+        }
+
         if (GameState.unwatchLobby) {
             GameState.unwatchLobby();
         }

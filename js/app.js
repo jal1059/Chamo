@@ -3,7 +3,7 @@
 const App = {
     // Initialize the application
     init() {
-        console.log('Initializing Chameleon Game...');
+        console.log('Initializing Chamo Game...');
 
         // Initialize Firebase
         if (!FirebaseManager.init()) {

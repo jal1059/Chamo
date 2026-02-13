@@ -5,6 +5,7 @@ const GameManager = {
     discussionTimeLeft: 0,
     discussionStartAt: null,
     votingLockTimer: null,
+    readyVoteLockTimer: null,
 
     // Continue from role reveal to discussion
     async continueFromReveal() {
@@ -43,6 +44,7 @@ const GameManager = {
             const remainingMs = endTime - Date.now();
             this.discussionTimeLeft = Math.max(0, Math.ceil(remainingMs / 1000));
             UIManager.updateDiscussionTimer(this.discussionTimeLeft);
+            this.updateReadyToVoteButton();
 
             if (this.discussionTimeLeft <= 0) {
                 this.stopDiscussionTimer();
@@ -67,7 +69,48 @@ const GameManager = {
             clearInterval(this.discussionTimer);
             this.discussionTimer = null;
         }
+        if (this.readyVoteLockTimer) {
+            clearInterval(this.readyVoteLockTimer);
+            this.readyVoteLockTimer = null;
+        }
         this.discussionStartAt = null;
+
+        const readyBtn = document.getElementById('ready-to-vote-btn');
+        if (readyBtn) {
+            readyBtn.disabled = false;
+            readyBtn.textContent = 'Ready to Vote';
+        }
+    },
+
+    // Get remaining lock time before players can click Ready to Vote
+    getReadyToVoteRemainingSeconds() {
+        const game = GameState.lobbyData?.game;
+        if (!game?.discussionStartedAt) {
+            return 0;
+        }
+
+        const minDiscussionBeforeVote = gameConfig.minDiscussionBeforeVote || 15;
+        const readyUnlockAt = game.discussionStartedAt + (minDiscussionBeforeVote * 1000);
+        const remainingMs = readyUnlockAt - Date.now();
+        return Math.max(0, Math.ceil(remainingMs / 1000));
+    },
+
+    // Update ready button state based on discussion lock
+    updateReadyToVoteButton() {
+        const readyBtn = document.getElementById('ready-to-vote-btn');
+        if (!readyBtn || GameState.currentScreen !== 'discussion-screen') {
+            return;
+        }
+
+        const remaining = this.getReadyToVoteRemainingSeconds();
+        if (remaining > 0) {
+            readyBtn.disabled = true;
+            readyBtn.textContent = `Ready to Vote (${remaining}s)`;
+            return;
+        }
+
+        readyBtn.disabled = false;
+        readyBtn.textContent = 'Ready to Vote';
     },
 
     // Get remaining voting lock time in seconds
@@ -131,6 +174,13 @@ const GameManager = {
 
     // Player indicates ready to vote
     async readyToVote() {
+        const readyLockRemaining = this.getReadyToVoteRemainingSeconds();
+        if (readyLockRemaining > 0) {
+            UIManager.showToast(`Discussion lock: ${readyLockRemaining}s remaining`, 'error');
+            this.updateReadyToVoteButton();
+            return;
+        }
+
         this.stopDiscussionTimer();
 
         // Show voting screen
