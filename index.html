@@ -84,6 +84,15 @@
                     <p class="info-text" data-typewriter>Waiting for players... (3-8 players recommended)</p>
                 </div>
 
+                <div id="lobby-settings" class="lobby-settings">
+                    <h3>Round Settings</h3>
+                    <label class="toggle-row" for="text-clue-mode-toggle">
+                        <input type="checkbox" id="text-clue-mode-toggle">
+                        <span>Turn-by-turn text clues</span>
+                    </label>
+                    <p class="info-text">Host can enable this when players are not in the same room.</p>
+                </div>
+
                 <div class="button-group">
                     <button id="start-game-btn" class="btn btn-primary" disabled>Start Game</button>
                     <button id="leave-lobby-btn" class="btn btn-secondary">Leave Lobby</button>
@@ -130,6 +139,16 @@
                     <span id="discussion-timer">--:--</span>
                 </div>
                 <p class="instruction-text" data-typewriter>Discuss and figure out who the Chameleon is!</p>
+
+                <div id="clue-phase-panel" class="clue-phase-panel hidden">
+                    <p id="clue-turn-status" class="instruction-text">Waiting for clue turns...</p>
+                    <div id="clue-messages" class="clue-messages"></div>
+                    <div class="clue-input-row">
+                        <input type="text" id="clue-input" class="input-field" placeholder="Type your clue" maxlength="60">
+                        <button id="submit-clue-btn" class="btn btn-primary">Send Clue</button>
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button id="ready-to-vote-btn" class="btn btn-primary">Ready to Vote</button>
                     <button id="skip-round-btn" class="btn btn-secondary hidden">Skip Round (Host)</button>

@@ -343,6 +343,26 @@ h3 {
     font-weight: 500;
 }
 
+.lobby-settings {
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-md);
+    background: rgba(0, 255, 102, 0.05);
+    border-radius: var(--radius-md);
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.95rem;
+}
+
+.toggle-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--secondary-color);
+}
+
 /* ===========================
    Topics List
    =========================== */
@@ -479,6 +499,48 @@ h3 {
     font-weight: bold;
     color: var(--secondary-color);
     text-shadow: 0 2px 8px var(--shadow);
+}
+
+.clue-phase-panel {
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-md);
+    background: rgba(0, 255, 102, 0.06);
+    border-radius: var(--radius-md);
+}
+
+.clue-messages {
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background: rgba(0, 255, 102, 0.04);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.clue-message {
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 255, 102, 0.09);
+    border: 1px solid rgba(0, 255, 102, 0.25);
+    font-size: 0.92rem;
+}
+
+.clue-message .clue-author {
+    font-weight: 700;
+    margin-right: 0.4rem;
+}
+
+.clue-input-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.clue-input-row .btn {
+    margin-top: 0;
 }
 
 /* ===========================
@@ -693,6 +755,19 @@ h3 {
     
     .voting-players-list {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .clue-input-row {
+        flex-direction: row;
+    }
+
+    .clue-input-row .input-field {
+        flex: 1;
+    }
+
+    .clue-input-row .btn {
+        width: auto;
+        min-width: 170px;
     }
 }
 

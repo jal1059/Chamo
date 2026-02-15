@@ -6,6 +6,7 @@ const GameManager = {
     discussionStartAt: null,
     votingLockTimer: null,
     readyVoteLockTimer: null,
+    openingVotingFromClues: false,
 
     // Continue from role reveal to discussion
     async continueFromReveal() {
@@ -174,6 +175,12 @@ const GameManager = {
 
     // Player indicates ready to vote
     async readyToVote() {
+        const clueState = GameState.lobbyData?.game?.clueState;
+        if (clueState?.enabled && !clueState.completed) {
+            UIManager.showToast('Finish all clue turns before voting', 'error');
+            return;
+        }
+
         const readyLockRemaining = this.getReadyToVoteRemainingSeconds();
         if (readyLockRemaining > 0) {
             UIManager.showToast(`Discussion lock: ${readyLockRemaining}s remaining`, 'error');
@@ -196,6 +203,81 @@ const GameManager = {
         if (!result.success) {
             UIManager.showToast(result.error || 'Failed to open voting phase', 'error');
         }
+    },
+
+    // Open voting without requiring players to click ready (used by clue mode)
+    async startVotingNow() {
+        if (this.openingVotingFromClues) {
+            return;
+        }
+
+        this.openingVotingFromClues = true;
+        this.stopDiscussionTimer();
+
+        const players = GameState.getPlayers();
+        const votes = GameState.lobbyData?.game?.playerVotes || {};
+
+        UIManager.updateVotingPlayersList(players);
+        UIManager.showScreen('voting-screen');
+
+        const votedCount = Object.keys(votes).length;
+        this.startVotingLockCountdown(votedCount, players.length);
+
+        try {
+            const result = await FirebaseManager.openVotingPhase(GameState.lobbyCode);
+            if (!result.success) {
+                UIManager.showToast(result.error || 'Failed to open voting phase', 'error');
+            }
+        } finally {
+            this.openingVotingFromClues = false;
+        }
+    },
+
+    // Submit clue during turn-based clue mode
+    async submitClueTurn() {
+        const clueInput = document.getElementById('clue-input');
+        if (!clueInput) return;
+
+        const clueState = GameState.lobbyData?.game?.clueState;
+        if (!clueState?.enabled || clueState.completed) {
+            UIManager.showToast('Clue phase is not active', 'error');
+            return;
+        }
+
+        const turnOrder = Array.isArray(clueState.turnOrder) ? clueState.turnOrder : [];
+        const currentTurnIndex = Number.isInteger(clueState.currentTurnIndex) ? clueState.currentTurnIndex : 0;
+        const expectedPlayerId = turnOrder[currentTurnIndex];
+
+        if (expectedPlayerId !== GameState.playerId) {
+            UIManager.showToast('Wait for your turn', 'error');
+            return;
+        }
+
+        const clueText = clueInput.value.trim();
+        if (!clueText) {
+            UIManager.showToast('Please enter a clue', 'error');
+            return;
+        }
+
+        const clueMaxLength = gameConfig.clueMaxLength || 60;
+        if (clueText.length > clueMaxLength) {
+            UIManager.showToast(`Clue must be ${clueMaxLength} characters or less`, 'error');
+            return;
+        }
+
+        const result = await FirebaseManager.submitClueTurn(
+            GameState.lobbyCode,
+            GameState.playerId,
+            GameState.playerName,
+            clueText
+        );
+
+        if (!result.success) {
+            UIManager.showToast(result.error || 'Unable to submit clue', 'error');
+            return;
+        }
+
+        clueInput.value = '';
     },
 
     // Vote for a player

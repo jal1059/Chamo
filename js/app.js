@@ -17,6 +17,11 @@ const App = {
         // Set up event listeners
         this.setupEventListeners();
 
+        const clueInput = document.getElementById('clue-input');
+        if (clueInput) {
+            clueInput.maxLength = gameConfig.clueMaxLength || 60;
+        }
+
         // Check if we should restore to lobby
         if (GameState.lobbyCode && GameState.playerId) {
             this.restoreSession();
@@ -65,6 +70,10 @@ const App = {
             LobbyManager.startGame();
         });
 
+        document.getElementById('text-clue-mode-toggle')?.addEventListener('change', (e) => {
+            LobbyManager.updateTextClueMode(e.target.checked);
+        });
+
         document.getElementById('leave-lobby-btn')?.addEventListener('click', () => {
             if (confirm('Are you sure you want to leave the lobby?')) {
                 LobbyManager.leaveLobby();
@@ -84,6 +93,16 @@ const App = {
         document.getElementById('skip-round-btn')?.addEventListener('click', () => {
             if (confirm('Skip this round and return everyone to lobby?')) {
                 GameManager.skipRound();
+            }
+        });
+
+        document.getElementById('submit-clue-btn')?.addEventListener('click', () => {
+            GameManager.submitClueTurn();
+        });
+
+        document.getElementById('clue-input')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                GameManager.submitClueTurn();
             }
         });
 

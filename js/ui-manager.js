@@ -93,6 +93,17 @@ const UIManager = {
         }
     },
 
+    // Update lobby text clue mode toggle visibility and state
+    updateLobbyTextClueMode(enabled, isHost) {
+        const settingsSection = document.getElementById('lobby-settings');
+        const toggle = document.getElementById('text-clue-mode-toggle');
+        if (!settingsSection || !toggle) return;
+
+        settingsSection.classList.remove('hidden');
+        toggle.checked = !!enabled;
+        toggle.disabled = !isHost || GameState.getGameStatus() !== 'waiting';
+    },
+
     // Update topics list for voting
     updateTopicsList(topics, currentVote = null) {
         const listElement = document.getElementById('topics-list');
@@ -259,8 +270,12 @@ const UIManager = {
     },
 
     // Update discussion action controls for host/non-host
-    updateDiscussionActions(isHost) {
+    updateDiscussionActions(isHost, clueModeActive = false) {
         const skipRoundBtn = document.getElementById('skip-round-btn');
+        const readyBtn = document.getElementById('ready-to-vote-btn');
+        const cluePanel = document.getElementById('clue-phase-panel');
+        const timerDisplay = document.querySelector('.timer-display');
+        const instruction = document.querySelector('#discussion-screen .instruction-text');
         if (!skipRoundBtn) return;
 
         if (isHost) {
@@ -268,6 +283,83 @@ const UIManager = {
         } else {
             skipRoundBtn.classList.add('hidden');
         }
+
+        if (readyBtn) {
+            readyBtn.classList.toggle('hidden', clueModeActive);
+        }
+
+        if (cluePanel) {
+            cluePanel.classList.toggle('hidden', !clueModeActive);
+        }
+
+        if (timerDisplay) {
+            timerDisplay.classList.toggle('hidden', clueModeActive);
+        }
+
+        if (instruction) {
+            instruction.textContent = clueModeActive
+                ? 'Submit one clue in turn order. Voting starts after all clues are in.'
+                : 'Discuss and figure out who the Chameleon is!';
+        }
+    },
+
+    // Render clue turn state for turn-based text clue mode
+    renderClueTurnState(clueState, players, currentPlayerId) {
+        const statusEl = document.getElementById('clue-turn-status');
+        const messagesEl = document.getElementById('clue-messages');
+        const inputEl = document.getElementById('clue-input');
+        const submitBtn = document.getElementById('submit-clue-btn');
+
+        if (!statusEl || !messagesEl || !inputEl || !submitBtn) {
+            return;
+        }
+
+        const playerMap = new Map(players.map((player) => [player.id, player.name]));
+        const turnOrder = Array.isArray(clueState?.turnOrder) ? clueState.turnOrder : [];
+        const currentTurnIndex = Number.isInteger(clueState?.currentTurnIndex) ? clueState.currentTurnIndex : 0;
+        const clues = clueState?.clues || {};
+        const currentTurnPlayerId = turnOrder[currentTurnIndex];
+        const isCompleted = !!clueState?.completed;
+        const isCurrentPlayersTurn = currentTurnPlayerId === currentPlayerId;
+
+        if (isCompleted) {
+            statusEl.textContent = 'All clues submitted. Opening voting...';
+        } else if (!currentTurnPlayerId) {
+            statusEl.textContent = 'Waiting for clue phase to initialize...';
+        } else {
+            const currentTurnName = playerMap.get(currentTurnPlayerId) || 'Player';
+            statusEl.textContent = isCurrentPlayersTurn
+                ? `Your turn to submit a clue.`
+                : `Waiting for ${currentTurnName} to submit a clue.`;
+        }
+
+        messagesEl.innerHTML = '';
+        turnOrder.forEach((playerId) => {
+            const clueEntry = clues[playerId];
+            if (!clueEntry) {
+                return;
+            }
+
+            const messageItem = document.createElement('div');
+            messageItem.className = 'clue-message';
+
+            const authorSpan = document.createElement('span');
+            authorSpan.className = 'clue-author';
+            authorSpan.textContent = `${clueEntry.playerName || playerMap.get(playerId) || 'Player'}:`;
+
+            const textSpan = document.createElement('span');
+            textSpan.textContent = clueEntry.text || '';
+
+            messageItem.appendChild(authorSpan);
+            messageItem.appendChild(textSpan);
+            messagesEl.appendChild(messageItem);
+        });
+
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+        const canSubmit = !isCompleted && isCurrentPlayersTurn && !clues[currentPlayerId];
+        inputEl.disabled = !canSubmit;
+        submitBtn.disabled = !canSubmit;
     },
 
     // Update voting players list

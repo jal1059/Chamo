@@ -169,10 +169,12 @@ const LobbyManager = {
             id,
             ...data
         }));
+        const textClueModeEnabled = !!lobbyData?.settings?.textClueModeEnabled;
 
         // Always update players list if on lobby screen
         if (GameState.currentScreen === 'lobby-screen') {
             UIManager.updatePlayersList(players);
+            UIManager.updateLobbyTextClueMode(textClueModeEnabled, GameState.isHost);
         }
 
         // Handle different game states
@@ -193,6 +195,7 @@ const LobbyManager = {
             UIManager.updateLobbyCode(GameState.lobbyCode);
             UIManager.showScreen('lobby-screen');
             UIManager.updatePlayersList(players);
+            UIManager.updateLobbyTextClueMode(textClueModeEnabled, GameState.isHost);
         } else {
             GameManager.stopDiscussionTimer();
             GameManager.stopVotingLockCountdown();
@@ -226,6 +229,8 @@ const LobbyManager = {
     // Handle playing phase
     handlePlayingPhase(lobbyData, players) {
         const game = lobbyData.game;
+        const clueState = game?.clueState;
+        const textClueModeEnabled = !!lobbyData?.settings?.textClueModeEnabled;
 
         // Handle player voting
         if (game.votingOpenedAt || game.playerVotes) {
@@ -257,8 +262,19 @@ const LobbyManager = {
             if (GameState.currentScreen !== 'discussion-screen') {
                 UIManager.showScreen('discussion-screen');
             }
-            UIManager.updateDiscussionActions(GameState.isHost);
-            GameManager.startDiscussionPhase(game.discussionStartedAt, game.discussionDuration || gameConfig.discussionTime);
+
+            const clueModeActive = textClueModeEnabled && clueState?.enabled;
+            UIManager.updateDiscussionActions(GameState.isHost, clueModeActive);
+
+            if (clueModeActive) {
+                UIManager.renderClueTurnState(clueState, players, GameState.playerId);
+
+                if (clueState.completed && !game.votingOpenedAt) {
+                    GameManager.startVotingNow();
+                }
+            } else {
+                GameManager.startDiscussionPhase(game.discussionStartedAt, game.discussionDuration || gameConfig.discussionTime);
+            }
             return;
         }
         
@@ -271,6 +287,32 @@ const LobbyManager = {
             UIManager.displayRoleReveal(isChameleon, secretWord, topic);
             UIManager.showScreen('role-reveal-screen');
             return;
+        }
+    },
+
+    // Update host controlled text clue mode setting
+    async updateTextClueMode(enabled) {
+        if (!GameState.isHost) {
+            UIManager.showToast('Only host can change this setting', 'error');
+            return;
+        }
+
+        if (GameState.getGameStatus() !== 'waiting') {
+            UIManager.showToast('This setting can only change before the round starts', 'error');
+            UIManager.updateLobbyTextClueMode(
+                !!GameState.lobbyData?.settings?.textClueModeEnabled,
+                GameState.isHost
+            );
+            return;
+        }
+
+        const result = await FirebaseManager.updateTextClueModeSetting(GameState.lobbyCode, enabled);
+        if (!result.success) {
+            UIManager.showToast(result.error || 'Failed to update setting', 'error');
+            UIManager.updateLobbyTextClueMode(
+                !!GameState.lobbyData?.settings?.textClueModeEnabled,
+                GameState.isHost
+            );
         }
     },
 

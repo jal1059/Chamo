@@ -78,6 +78,9 @@ const FirebaseManager = {
                 host: hostId,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 status: 'waiting', // waiting, voting, playing, finished
+                settings: {
+                    textClueModeEnabled: false
+                },
                 players: {
                     [hostId]: {
                         name: hostName,
@@ -283,17 +286,118 @@ const FirebaseManager = {
                 return { success: false, error: 'Database is not initialized' };
             }
 
+            const lobbySnapshot = await this.withTimeout(
+                this.db.ref(`lobbies/${lobbyCode}`).once('value'),
+                'Load lobby settings'
+            );
+
+            if (!lobbySnapshot.exists()) {
+                return { success: false, error: 'Lobby not found' };
+            }
+
+            const lobby = lobbySnapshot.val();
+            const textClueModeEnabled = !!lobby?.settings?.textClueModeEnabled;
+
+            let clueState = null;
+            if (textClueModeEnabled) {
+                const players = Object.entries(lobby.players || {})
+                    .sort(([, a], [, b]) => (a.joinedAt || 0) - (b.joinedAt || 0))
+                    .map(([id]) => id);
+
+                clueState = {
+                    enabled: true,
+                    turnOrder: players,
+                    currentTurnIndex: 0,
+                    clues: {},
+                    completed: false
+                };
+            }
+
             await this.withTimeout(this.db.ref(`lobbies/${lobbyCode}`).update({
                 'game/discussionStartedAt': firebase.database.ServerValue.TIMESTAMP,
                 'game/discussionDuration': gameConfig.discussionTime,
                 'game/voteLockTime': gameConfig.voteLockTime,
                 'game/votingOpenedAt': null,
-                'game/playerVotes': null
+                'game/playerVotes': null,
+                'game/clueState': clueState
             }), 'Start discussion');
 
             return { success: true };
         } catch (error) {
             console.error('Error starting discussion:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Update lobby setting for host-controlled text clue mode
+    async updateTextClueModeSetting(lobbyCode, enabled) {
+        try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(
+                this.db.ref(`lobbies/${lobbyCode}/settings/textClueModeEnabled`).set(!!enabled),
+                'Update text clue mode setting'
+            );
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error updating text clue mode:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Submit one clue during turn-based clue mode and advance turn atomically
+    async submitClueTurn(lobbyCode, playerId, playerName, clueText) {
+        try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            const clueStateRef = this.db.ref(`lobbies/${lobbyCode}/game/clueState`);
+            const transactionResult = await this.withTimeout(
+                clueStateRef.transaction((state) => {
+                    if (!state || !state.enabled || state.completed) {
+                        return;
+                    }
+
+                    const turnOrder = Array.isArray(state.turnOrder) ? state.turnOrder : [];
+                    const currentTurnIndex = Number.isInteger(state.currentTurnIndex) ? state.currentTurnIndex : 0;
+                    const currentPlayerId = turnOrder[currentTurnIndex];
+
+                    if (!currentPlayerId || currentPlayerId !== playerId) {
+                        return;
+                    }
+
+                    const clues = state.clues || {};
+                    if (clues[playerId]) {
+                        return;
+                    }
+
+                    clues[playerId] = {
+                        playerName,
+                        text: clueText,
+                        submittedAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+
+                    const nextIndex = currentTurnIndex + 1;
+                    state.clues = clues;
+                    state.currentTurnIndex = nextIndex;
+                    state.completed = nextIndex >= turnOrder.length;
+
+                    return state;
+                }),
+                'Submit clue turn'
+            );
+
+            if (!transactionResult.committed) {
+                return { success: false, error: 'Not your turn or clue phase unavailable' };
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error submitting clue turn:', error);
             return { success: false, error: error.message };
         }
     },
