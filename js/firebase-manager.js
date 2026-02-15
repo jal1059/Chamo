@@ -462,7 +462,12 @@ const FirebaseManager = {
                     state.clueCount = clueCount + 1;
                     state.currentTurnIndex = nextTurnIndex;
                     state.currentRound = Math.min(nextRound, totalRounds + 1);
-                    state.completed = nextRound > totalRounds;
+
+                    const isCompleted = nextRound > totalRounds;
+                    state.completed = isCompleted;
+                    if (isCompleted && !state.completedAt) {
+                        state.completedAt = firebase.database.ServerValue.TIMESTAMP;
+                    }
 
                     return state;
                 }),

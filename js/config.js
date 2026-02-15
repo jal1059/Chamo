@@ -20,6 +20,7 @@ const gameConfig = {
     voteLockTime: 15, // seconds players must wait before voting opens
     clueMaxLength: 60,
     clueRounds: 2, // number of full clue rounds (set to 3 for longer rounds)
+    finalClueHoldTime: 5, // seconds to keep final clue visible before voting opens
     lobbyCodeLength: 6,
     lobbyCodeMinLength: 3,
     lobbyCodeMaxLength: 8,

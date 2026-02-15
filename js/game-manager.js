@@ -7,6 +7,9 @@ const GameManager = {
     votingLockTimer: null,
     readyVoteLockTimer: null,
     openingVotingFromClues: false,
+    finalClueVotingTimer: null,
+    finalClueCountdownTimer: null,
+    finalClueVoteAt: null,
 
     // Continue from role reveal to discussion
     async continueFromReveal() {
@@ -75,12 +78,67 @@ const GameManager = {
             this.readyVoteLockTimer = null;
         }
         this.discussionStartAt = null;
+        this.stopFinalClueVotingDelay();
 
         const readyBtn = document.getElementById('ready-to-vote-btn');
         if (readyBtn) {
             readyBtn.disabled = false;
             readyBtn.textContent = 'Ready to Vote';
         }
+    },
+
+    // Stop scheduled delayed voting open after final clue
+    stopFinalClueVotingDelay() {
+        if (this.finalClueVotingTimer) {
+            clearTimeout(this.finalClueVotingTimer);
+            this.finalClueVotingTimer = null;
+        }
+        if (this.finalClueCountdownTimer) {
+            clearInterval(this.finalClueCountdownTimer);
+            this.finalClueCountdownTimer = null;
+        }
+        this.finalClueVoteAt = null;
+    },
+
+    // Start delayed voting open so players can read final clue
+    scheduleVotingAfterFinalClue(completedAt) {
+        if (!completedAt || !GameState.isHost) {
+            return;
+        }
+
+        const holdTime = Math.max(0, gameConfig.finalClueHoldTime || 8);
+        const voteAt = completedAt + (holdTime * 1000);
+
+        if (this.finalClueVoteAt === voteAt && this.finalClueVotingTimer) {
+            return;
+        }
+
+        this.stopFinalClueVotingDelay();
+        this.finalClueVoteAt = voteAt;
+
+        const statusElement = document.getElementById('clue-turn-status');
+        const updateStatus = () => {
+            const remainingMs = voteAt - Date.now();
+            const remaining = Math.max(0, Math.ceil(remainingMs / 1000));
+            if (statusElement) {
+                statusElement.textContent = `All clues submitted. Voting starts in ${remaining}s...`;
+            }
+        };
+
+        updateStatus();
+        this.finalClueCountdownTimer = setInterval(() => {
+            updateStatus();
+            if (Date.now() >= voteAt) {
+                clearInterval(this.finalClueCountdownTimer);
+                this.finalClueCountdownTimer = null;
+            }
+        }, 1000);
+
+        const delayMs = Math.max(0, voteAt - Date.now());
+        this.finalClueVotingTimer = setTimeout(() => {
+            this.stopFinalClueVotingDelay();
+            this.startVotingNow();
+        }, delayMs);
     },
 
     // Get remaining lock time before players can click Ready to Vote

@@ -307,8 +307,11 @@ const LobbyManager = {
             if (clueModeActive) {
                 UIManager.renderClueTurnState(clueState, players, GameState.playerId);
 
-                if (clueState.completed && !game.votingOpenedAt) {
-                    GameManager.startVotingNow();
+                if (clueState.completed && !game.votingOpenedAt && GameState.isHost) {
+                    const completedAt = typeof clueState.completedAt === 'number'
+                        ? clueState.completedAt
+                        : Date.now();
+                    GameManager.scheduleVotingAfterFinalClue(completedAt);
                 }
             } else {
                 GameManager.startDiscussionPhase(game.discussionStartedAt, game.discussionDuration || gameConfig.discussionTime);
