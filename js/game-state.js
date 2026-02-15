@@ -10,8 +10,8 @@ const GameState = {
     unwatchLobby: null,
 
     // Initialize player
-    initPlayer(name) {
-        this.playerId = utils.generatePlayerId();
+    initPlayer(name, playerId = null) {
+        this.playerId = playerId || utils.generatePlayerId();
         this.playerName = name;
         // Store in session storage for page refresh
         sessionStorage.setItem('playerId', this.playerId);

@@ -2,6 +2,8 @@
 
 const FirebaseManager = {
     db: null,
+    auth: null,
+    currentUser: null,
     requestTimeoutMs: 10000,
 
     // Validate Firebase config values are set
@@ -54,8 +56,18 @@ const FirebaseManager = {
                 return false;
             }
 
-            firebase.initializeApp(firebaseConfig);
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+
             this.db = firebase.database();
+            this.auth = firebase.auth();
+            this.currentUser = this.auth.currentUser;
+
+            this.auth.onAuthStateChanged((user) => {
+                this.currentUser = user || null;
+            });
+
             console.log('Firebase initialized successfully');
             return true;
         } catch (error) {
@@ -63,6 +75,36 @@ const FirebaseManager = {
             UIManager.showToast('Failed to connect to server', 'error');
             return false;
         }
+    },
+
+    // Ensure current browser session is signed in anonymously
+    async ensureSignedIn() {
+        try {
+            if (!this.auth) {
+                return { success: false, error: 'Auth is not initialized' };
+            }
+
+            if (this.auth.currentUser) {
+                this.currentUser = this.auth.currentUser;
+                return { success: true, uid: this.currentUser.uid };
+            }
+
+            const credential = await this.withTimeout(
+                this.auth.signInAnonymously(),
+                'Anonymous sign-in'
+            );
+
+            this.currentUser = credential.user;
+            return { success: true, uid: this.currentUser?.uid || null };
+        } catch (error) {
+            console.error('Anonymous sign-in error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Get current authenticated user id
+    getCurrentUserId() {
+        return this.currentUser?.uid || this.auth?.currentUser?.uid || null;
     },
 
     // Create a new lobby

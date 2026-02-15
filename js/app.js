@@ -2,7 +2,7 @@
 
 const App = {
     // Initialize the application
-    init() {
+    async init() {
         console.log('Initializing Chamo Game...');
 
         // Initialize Firebase
@@ -11,8 +11,16 @@ const App = {
             return;
         }
 
+        const authResult = await FirebaseManager.ensureSignedIn();
+        if (!authResult.success || !authResult.uid) {
+            UIManager.showToast(authResult.error || 'Failed to authenticate', 'error');
+            return;
+        }
+
         // Restore session if exists
         GameState.restoreFromSession();
+        GameState.playerId = authResult.uid;
+        sessionStorage.setItem('playerId', authResult.uid);
 
         // Set up event listeners
         this.setupEventListeners();

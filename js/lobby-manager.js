@@ -17,7 +17,14 @@ const LobbyManager = {
             }
 
             // Initialize player
-            GameState.initPlayer(validation.name);
+            const authResult = await FirebaseManager.ensureSignedIn();
+            if (!authResult.success || !authResult.uid) {
+                UIManager.showToast(authResult.error || 'Authentication required', 'error');
+                UIManager.hideLoading();
+                return;
+            }
+
+            GameState.initPlayer(validation.name, authResult.uid);
 
             // Validate optional custom lobby code from host
             const trimmedPreferredCode = preferredLobbyCode.trim();
@@ -110,7 +117,14 @@ const LobbyManager = {
             }
 
             // Initialize player
-            GameState.initPlayer(nameValidation.name);
+            const authResult = await FirebaseManager.ensureSignedIn();
+            if (!authResult.success || !authResult.uid) {
+                UIManager.showToast(authResult.error || 'Authentication required', 'error');
+                UIManager.hideLoading();
+                return;
+            }
+
+            GameState.initPlayer(nameValidation.name, authResult.uid);
 
             // Join lobby in Firebase
             const result = await FirebaseManager.joinLobby(

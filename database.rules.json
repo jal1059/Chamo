@@ -1,0 +1,47 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "lobbies": {
+      "$lobbyCode": {
+        ".read": "auth != null && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()",
+        "host": {
+          ".write": "auth != null && (!data.exists() || data.val() === auth.uid)",
+          ".validate": "newData.isString()"
+        },
+        "createdAt": {
+          ".write": "auth != null && (!data.exists() || root.child('lobbies/' + $lobbyCode + '/host').val() === auth.uid)"
+        },
+        "status": {
+          ".write": "auth != null && root.child('lobbies/' + $lobbyCode + '/host').val() === auth.uid"
+        },
+        "settings": {
+          ".write": "auth != null && root.child('lobbies/' + $lobbyCode + '/host').val() === auth.uid"
+        },
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        },
+        "game": {
+          "votes": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()"
+            }
+          },
+          "playerVotes": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()"
+            }
+          },
+          "clueState": {
+            ".write": "auth != null && root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists()"
+          },
+          "$other": {
+            ".write": "auth != null && root.child('lobbies/' + $lobbyCode + '/host').val() === auth.uid"
+          }
+        }
+      }
+    }
+  }
+}
