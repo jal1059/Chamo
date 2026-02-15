@@ -239,18 +239,26 @@ const FirebaseManager = {
     // Listen to lobby changes
     watchLobby(lobbyCode, callback) {
         if (!this.ensureDb()) {
-            callback(null);
+            callback(null, new Error('Database is not initialized'));
             return () => {};
         }
 
         const lobbyRef = this.db.ref(`lobbies/${lobbyCode}`);
-        lobbyRef.on('value', (snapshot) => {
+
+        const onValue = (snapshot) => {
             if (snapshot.exists()) {
-                callback(snapshot.val());
+                callback(snapshot.val(), null);
             } else {
-                callback(null); // Lobby deleted
+                callback(null, null); // Lobby deleted
             }
-        });
+        };
+
+        const onError = (error) => {
+            console.error('Lobby watch error:', error);
+            callback(null, error);
+        };
+
+        lobbyRef.on('value', onValue, onError);
         return () => lobbyRef.off('value');
     },
 

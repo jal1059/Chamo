@@ -142,6 +142,15 @@ const LobbyManager = {
             // Set lobby in game state
             GameState.setLobby(codeValidation.code, false);
 
+            // Show immediate local placeholder player list while realtime listener loads
+            UIManager.updatePlayersList([
+                {
+                    id: GameState.playerId,
+                    name: GameState.playerName,
+                    isHost: false
+                }
+            ]);
+
             // Watch lobby for changes
             this.startWatchingLobby(codeValidation.code);
 
@@ -160,7 +169,22 @@ const LobbyManager = {
 
     // Start watching lobby for real-time updates
     startWatchingLobby(lobbyCode) {
-        GameState.unwatchLobby = FirebaseManager.watchLobby(lobbyCode, (lobbyData) => {
+        GameState.unwatchLobby = FirebaseManager.watchLobby(lobbyCode, (lobbyData, error) => {
+            if (error) {
+                const isPermissionError = String(error?.code || '').includes('PERMISSION_DENIED')
+                    || String(error?.message || '').toLowerCase().includes('permission_denied');
+
+                if (isPermissionError) {
+                    UIManager.showToast('Access denied to this lobby. Rejoin from menu.', 'error');
+                } else {
+                    UIManager.showToast('Connection error while watching lobby', 'error');
+                }
+
+                console.error('watchLobby callback error:', error);
+                this.exitToMenu();
+                return;
+            }
+
             if (!lobbyData) {
                 // Lobby was deleted
                 UIManager.showToast('Lobby was closed', 'error');
