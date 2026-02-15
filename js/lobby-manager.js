@@ -297,6 +297,11 @@ const LobbyManager = {
         // Handle synchronized discussion timer phase
         if (game.discussionStartedAt) {
             UIManager.updateCurrentTopic(game.selectedTopic);
+            UIManager.updateDiscussionTopicSheet(
+                game.selectedTopic,
+                game.chameleon === GameState.playerId,
+                game.secretWord
+            );
             if (GameState.currentScreen !== 'discussion-screen') {
                 UIManager.showScreen('discussion-screen');
             }

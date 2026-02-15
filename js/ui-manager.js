@@ -3,6 +3,8 @@
 const UIManager = {
     roleHideTimer: null,
     roleHideCountdownTimer: null,
+    discussionWordsHidden: false,
+    discussionWordsTopic: null,
 
     // Show a specific screen
     showScreen(screenId) {
@@ -294,6 +296,58 @@ const UIManager = {
         const topicElement = document.getElementById('current-topic');
         if (topicElement) {
             topicElement.textContent = topic;
+        }
+    },
+
+    // Render topic sheet during discussion and keep hide/show state
+    updateDiscussionTopicSheet(topic, isChameleon, secretWord) {
+        const sheetEl = document.getElementById('discussion-topic-sheet');
+        const titleEl = document.getElementById('discussion-topic-sheet-title');
+        const wordsEl = document.getElementById('discussion-topic-words');
+        const toggleBtn = document.getElementById('toggle-discussion-words-btn');
+
+        if (!sheetEl || !titleEl || !wordsEl || !toggleBtn) {
+            return;
+        }
+
+        if (this.discussionWordsTopic !== topic) {
+            this.discussionWordsHidden = false;
+            this.discussionWordsTopic = topic;
+        }
+
+        titleEl.textContent = `Topic Sheet: ${topic}`;
+
+        const topicWords = Array.isArray(gameConfig.topics?.[topic]) ? gameConfig.topics[topic] : [];
+        wordsEl.innerHTML = '';
+
+        topicWords.forEach((word) => {
+            const wordPill = document.createElement('span');
+            wordPill.className = 'topic-word-pill';
+            wordPill.textContent = word;
+
+            if (!isChameleon && word === secretWord) {
+                wordPill.classList.add('secret');
+            }
+
+            wordsEl.appendChild(wordPill);
+        });
+
+        sheetEl.classList.toggle('hidden', this.discussionWordsHidden);
+        toggleBtn.textContent = this.discussionWordsHidden ? 'Show Word List' : 'Hide Word List';
+    },
+
+    // Toggle discussion topic sheet visibility
+    toggleDiscussionTopicSheet() {
+        this.discussionWordsHidden = !this.discussionWordsHidden;
+
+        const sheetEl = document.getElementById('discussion-topic-sheet');
+        const toggleBtn = document.getElementById('toggle-discussion-words-btn');
+
+        if (sheetEl) {
+            sheetEl.classList.toggle('hidden', this.discussionWordsHidden);
+        }
+        if (toggleBtn) {
+            toggleBtn.textContent = this.discussionWordsHidden ? 'Show Word List' : 'Hide Word List';
         }
     },
 

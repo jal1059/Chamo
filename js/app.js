@@ -98,6 +98,10 @@ const App = {
             GameManager.readyToVote();
         });
 
+        document.getElementById('toggle-discussion-words-btn')?.addEventListener('click', () => {
+            UIManager.toggleDiscussionTopicSheet();
+        });
+
         document.getElementById('skip-round-btn')?.addEventListener('click', () => {
             if (confirm('Skip this round and return everyone to lobby?')) {
                 GameManager.skipRound();
