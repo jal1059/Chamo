@@ -317,6 +317,8 @@ const UIManager = {
         const playerMap = new Map(players.map((player) => [player.id, player.name]));
         const turnOrder = Array.isArray(clueState?.turnOrder) ? clueState.turnOrder : [];
         const currentTurnIndex = Number.isInteger(clueState?.currentTurnIndex) ? clueState.currentTurnIndex : 0;
+        const currentRound = Number.isInteger(clueState?.currentRound) ? clueState.currentRound : 1;
+        const totalRounds = Number.isInteger(clueState?.totalRounds) ? clueState.totalRounds : 1;
         const clues = clueState?.clues || {};
         const currentTurnPlayerId = turnOrder[currentTurnIndex];
         const isCompleted = !!clueState?.completed;
@@ -329,13 +331,15 @@ const UIManager = {
         } else {
             const currentTurnName = playerMap.get(currentTurnPlayerId) || 'Player';
             statusEl.textContent = isCurrentPlayersTurn
-                ? `Your turn to submit a clue.`
-                : `Waiting for ${currentTurnName} to submit a clue.`;
+                ? `Round ${currentRound}/${totalRounds}: your turn to submit a clue.`
+                : `Round ${currentRound}/${totalRounds}: waiting for ${currentTurnName}.`;
         }
 
         messagesEl.innerHTML = '';
-        turnOrder.forEach((playerId) => {
-            const clueEntry = clues[playerId];
+        Object.keys(clues)
+            .sort((left, right) => Number(left) - Number(right))
+            .forEach((clueKey) => {
+            const clueEntry = clues[clueKey];
             if (!clueEntry) {
                 return;
             }
@@ -345,7 +349,9 @@ const UIManager = {
 
             const authorSpan = document.createElement('span');
             authorSpan.className = 'clue-author';
-            authorSpan.textContent = `${clueEntry.playerName || playerMap.get(playerId) || 'Player'}:`;
+            const cluePlayerId = clueEntry.playerId;
+            const clueRound = Number.isInteger(clueEntry.round) ? clueEntry.round : 1;
+            authorSpan.textContent = `[R${clueRound}] ${clueEntry.playerName || playerMap.get(cluePlayerId) || 'Player'}:`;
 
             const textSpan = document.createElement('span');
             textSpan.textContent = clueEntry.text || '';
@@ -357,9 +363,13 @@ const UIManager = {
 
         messagesEl.scrollTop = messagesEl.scrollHeight;
 
-        const canSubmit = !isCompleted && isCurrentPlayersTurn && !clues[currentPlayerId];
+        const canSubmit = !isCompleted && isCurrentPlayersTurn;
         inputEl.disabled = !canSubmit;
         submitBtn.disabled = !canSubmit;
+
+        if (canSubmit && inputEl.value.trim().length === 0) {
+            inputEl.focus();
+        }
     },
 
     // Update voting players list

@@ -361,11 +361,19 @@ const FirebaseManager = {
                     .sort(([, a], [, b]) => (a.joinedAt || 0) - (b.joinedAt || 0))
                     .map(([id]) => id);
 
+                const configuredRounds = Number.isInteger(gameConfig.clueRounds)
+                    ? gameConfig.clueRounds
+                    : parseInt(gameConfig.clueRounds, 10);
+                const totalRounds = Math.max(1, Math.min(3, configuredRounds || 2));
+
                 clueState = {
                     enabled: true,
                     turnOrder: players,
+                    totalRounds: totalRounds,
+                    currentRound: 1,
                     currentTurnIndex: 0,
                     clues: {},
+                    clueCount: 0,
                     completed: false
                 };
             }
@@ -422,26 +430,39 @@ const FirebaseManager = {
                     const turnOrder = Array.isArray(state.turnOrder) ? state.turnOrder : [];
                     const currentTurnIndex = Number.isInteger(state.currentTurnIndex) ? state.currentTurnIndex : 0;
                     const currentPlayerId = turnOrder[currentTurnIndex];
+                    const currentRound = Number.isInteger(state.currentRound) ? state.currentRound : 1;
+                    const totalRounds = Number.isInteger(state.totalRounds) ? state.totalRounds : 1;
 
                     if (!currentPlayerId || currentPlayerId !== playerId) {
                         return;
                     }
 
                     const clues = state.clues || {};
-                    if (clues[playerId]) {
-                        return;
-                    }
+                    const clueCount = Number.isInteger(state.clueCount) ? state.clueCount : 0;
 
-                    clues[playerId] = {
+                    clues[clueCount] = {
+                        playerId,
+                        round: currentRound,
                         playerName,
                         text: clueText,
                         submittedAt: firebase.database.ServerValue.TIMESTAMP
                     };
 
-                    const nextIndex = currentTurnIndex + 1;
+                    let nextTurnIndex = currentTurnIndex;
+                    let nextRound = currentRound;
+
+                    if (currentTurnIndex + 1 < turnOrder.length) {
+                        nextTurnIndex = currentTurnIndex + 1;
+                    } else {
+                        nextTurnIndex = 0;
+                        nextRound = currentRound + 1;
+                    }
+
                     state.clues = clues;
-                    state.currentTurnIndex = nextIndex;
-                    state.completed = nextIndex >= turnOrder.length;
+                    state.clueCount = clueCount + 1;
+                    state.currentTurnIndex = nextTurnIndex;
+                    state.currentRound = Math.min(nextRound, totalRounds + 1);
+                    state.completed = nextRound > totalRounds;
 
                     return state;
                 }),
