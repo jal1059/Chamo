@@ -296,15 +296,15 @@ const LobbyManager = {
 
         // Handle synchronized discussion timer phase
         if (game.discussionStartedAt) {
+            if (GameState.currentScreen !== 'discussion-screen') {
+                UIManager.showScreen('discussion-screen');
+            }
             UIManager.updateCurrentTopic(game.selectedTopic);
             UIManager.updateDiscussionTopicSheet(
                 game.selectedTopic,
                 game.chameleon === GameState.playerId,
                 game.secretWord
             );
-            if (GameState.currentScreen !== 'discussion-screen') {
-                UIManager.showScreen('discussion-screen');
-            }
 
             const clueModeActive = textClueModeEnabled && clueState?.enabled;
             UIManager.updateDiscussionActions(GameState.isHost, clueModeActive);

@@ -306,18 +306,26 @@ const UIManager = {
         const wordsEl = document.getElementById('discussion-topic-words');
         const toggleBtn = document.getElementById('toggle-discussion-words-btn');
 
-        if (!sheetEl || !titleEl || !wordsEl || !toggleBtn) {
+        if (!sheetEl || !titleEl || !wordsEl) {
             return;
         }
 
-        if (this.discussionWordsTopic !== topic) {
+        const rawTopic = (topic || '').toString().trim();
+        const topicKeys = Object.keys(gameConfig.topics || {});
+        const resolvedTopicKey = topicKeys.find((key) => key === rawTopic)
+            || topicKeys.find((key) => key.toLowerCase() === rawTopic.toLowerCase())
+            || rawTopic;
+
+        if (this.discussionWordsTopic !== resolvedTopicKey) {
             this.discussionWordsHidden = false;
-            this.discussionWordsTopic = topic;
+            this.discussionWordsTopic = resolvedTopicKey;
         }
 
-        titleEl.textContent = `Topic Sheet: ${topic}`;
+        titleEl.textContent = `Topic Sheet: ${resolvedTopicKey}`;
 
-        const topicWords = Array.isArray(gameConfig.topics?.[topic]) ? gameConfig.topics[topic] : [];
+        const topicWords = Array.isArray(gameConfig.topics?.[resolvedTopicKey])
+            ? gameConfig.topics[resolvedTopicKey]
+            : [];
         wordsEl.innerHTML = '';
 
         topicWords.forEach((word) => {
@@ -333,7 +341,9 @@ const UIManager = {
         });
 
         sheetEl.classList.toggle('hidden', this.discussionWordsHidden);
-        toggleBtn.textContent = this.discussionWordsHidden ? 'Show Word List' : 'Hide Word List';
+        if (toggleBtn) {
+            toggleBtn.textContent = this.discussionWordsHidden ? 'Show Word List' : 'Hide Word List';
+        }
     },
 
     // Toggle discussion topic sheet visibility
