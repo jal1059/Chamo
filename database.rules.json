@@ -4,7 +4,7 @@
     ".write": false,
     "lobbies": {
       "$lobbyCode": {
-        ".read": "auth != null && (root.child('lobbies/' + $lobbyCode + '/players/' + auth.uid).exists() || data.child('status').val() == 'waiting')",
+        ".read": "auth != null",
         ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('host').val() == auth.uid && newData.child('players/' + auth.uid).exists()) || (data.exists() && data.child('host').val() == auth.uid) || (data.exists() && !newData.exists() && data.child('host').val() == auth.uid))",
         "host": {
           ".write": "auth != null && ((!data.exists() && newData.val() == auth.uid) || data.val() == auth.uid)",

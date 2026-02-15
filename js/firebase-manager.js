@@ -172,6 +172,13 @@ const FirebaseManager = {
             }
 
             const lobby = snapshot.val();
+
+            if (lobby.players && lobby.players[playerId]) {
+                return {
+                    success: false,
+                    error: 'This browser is already in that lobby. Use incognito or a different browser/device for player 2.'
+                };
+            }
             
             if (lobby.status !== 'waiting') {
                 return { success: false, error: 'Game already started' };
