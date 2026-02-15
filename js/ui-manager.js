@@ -158,6 +158,32 @@ const UIManager = {
 
         const roleTitle = document.createElement('div');
         roleTitle.className = 'role-title';
+        const topicWords = Array.isArray(gameConfig.topics?.[topic]) ? gameConfig.topics[topic] : [];
+
+        const topicSheet = document.createElement('div');
+        topicSheet.className = 'topic-sheet';
+
+        const topicSheetTitle = document.createElement('div');
+        topicSheetTitle.className = 'topic-sheet-title';
+        topicSheetTitle.textContent = `Topic Sheet: ${topic}`;
+
+        const topicWordsGrid = document.createElement('div');
+        topicWordsGrid.className = 'topic-words-grid';
+
+        topicWords.forEach((word) => {
+            const wordPill = document.createElement('span');
+            wordPill.className = 'topic-word-pill';
+            wordPill.textContent = word;
+
+            if (!isChameleon && word === secretWord) {
+                wordPill.classList.add('secret');
+            }
+
+            topicWordsGrid.appendChild(wordPill);
+        });
+
+        topicSheet.appendChild(topicSheetTitle);
+        topicSheet.appendChild(topicWordsGrid);
         
         if (isChameleon) {
             roleTitle.classList.add('role-chameleon');
@@ -169,6 +195,7 @@ const UIManager = {
             
             roleDisplay.appendChild(roleTitle);
             roleDisplay.appendChild(description);
+            roleDisplay.appendChild(topicSheet);
         } else {
             roleTitle.classList.add('role-player');
             roleTitle.textContent = '🕵️ You are a PLAYER';
@@ -189,6 +216,7 @@ const UIManager = {
             roleDisplay.appendChild(topicDiv);
             roleDisplay.appendChild(wordDiv);
             roleDisplay.appendChild(description);
+            roleDisplay.appendChild(topicSheet);
         }
 
         const continueBtn = document.getElementById('continue-from-reveal-btn');
