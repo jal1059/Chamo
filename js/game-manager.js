@@ -394,6 +394,14 @@ const GameManager = {
         // Get player names
         const chameleonPlayer = players.find(p => p.id === chameleonId);
         const votedPlayer = players.find(p => p.id === mostVotedId);
+        const playersById = new Map(players.map((player) => [player.id, player]));
+
+        const voteDetails = Object.entries(votes).map(([voterId, votedId]) => ({
+            voterId,
+            voterName: playersById.get(voterId)?.name || 'Unknown',
+            votedId,
+            votedName: playersById.get(votedId)?.name || 'Unknown'
+        }));
 
         // Prepare results
         const results = {
@@ -403,7 +411,8 @@ const GameManager = {
             mostVotedName: votedPlayer?.name || 'Unknown',
             chameleonCaught: chameleonCaught,
             secretWord: GameState.lobbyData.game.secretWord,
-            votes: voteCounts
+            votes: voteCounts,
+            voteDetails
         };
 
         // Set results in Firebase

@@ -684,6 +684,20 @@ h3 {
     font-size: 1.25rem;
 }
 
+.vote-breakdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.vote-breakdown-item {
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 255, 102, 0.08);
+    border: 1px solid rgba(0, 255, 102, 0.2);
+}
+
 /* ===========================
    Loading Overlay
    =========================== */

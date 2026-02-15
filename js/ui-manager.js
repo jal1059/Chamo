@@ -581,10 +581,45 @@ const UIManager = {
         
         votedSection.appendChild(votedTitle);
         votedSection.appendChild(votedContent);
+
+        // Vote breakdown
+        const voteBreakdownSection = document.createElement('div');
+        voteBreakdownSection.className = 'result-section';
+
+        const voteBreakdownTitle = document.createElement('div');
+        voteBreakdownTitle.className = 'result-title';
+        voteBreakdownTitle.textContent = 'Who Voted For Who';
+
+        const voteBreakdownList = document.createElement('div');
+        voteBreakdownList.className = 'vote-breakdown-list';
+
+        const voteDetails = Array.isArray(results.voteDetails) ? results.voteDetails : [];
+        voteDetails.forEach((detail) => {
+            const row = document.createElement('div');
+            row.className = 'vote-breakdown-item';
+
+            const voterName = detail.voterId === GameState.playerId ? 'You' : (detail.voterName || 'Unknown');
+            const votedName = detail.votedId === GameState.playerId ? 'You' : (detail.votedName || 'Unknown');
+            row.textContent = `${voterName} → ${votedName}`;
+
+            voteBreakdownList.appendChild(row);
+        });
+
+        if (voteDetails.length === 0) {
+            const emptyRow = document.createElement('div');
+            emptyRow.className = 'result-content';
+            emptyRow.textContent = 'No vote details available for this round.';
+            voteBreakdownList.appendChild(emptyRow);
+        }
+
+        voteBreakdownSection.appendChild(voteBreakdownTitle);
+        voteBreakdownSection.appendChild(voteBreakdownList);
+
         resultsDisplay.appendChild(outcomeBanner);
         resultsDisplay.appendChild(chameleonSection);
         resultsDisplay.appendChild(wordSection);
         resultsDisplay.appendChild(votedSection);
+        resultsDisplay.appendChild(voteBreakdownSection);
     },
 
     // Update results action buttons based on host role
