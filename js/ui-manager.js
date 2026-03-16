@@ -22,6 +22,11 @@ const UIManager = {
             if (typeof TypewriterManager !== 'undefined') {
                 TypewriterManager.animateScreen(screen);
             }
+
+            // Refresh session score whenever lobby is shown
+            if (screenId === 'lobby-screen') {
+                this.updateScoreDisplay();
+            }
         }
     },
 
@@ -286,8 +291,12 @@ const UIManager = {
     // Update discussion timer
     updateDiscussionTimer(seconds) {
         const timerElement = document.getElementById('discussion-timer');
+        const timerDisplay = document.querySelector('.timer-display');
         if (timerElement) {
             timerElement.textContent = utils.formatTime(seconds);
+        }
+        if (timerDisplay) {
+            timerDisplay.classList.toggle('urgent', seconds <= 30 && seconds > 0);
         }
     },
 
@@ -512,6 +521,15 @@ const UIManager = {
         const isChameleon = results.chameleonId === GameState.playerId;
         const didWin = isChameleon ? !results.chameleonCaught : results.chameleonCaught;
 
+        // Record and display session score
+        this.recordSessionResult(didWin);
+        this.updateScoreDisplay();
+
+        // Trigger confetti for winners
+        if (didWin && typeof Confetti !== 'undefined') {
+            Confetti.burst();
+        }
+
         // Personalized outcome banner (top)
         const outcomeBanner = document.createElement('div');
         outcomeBanner.className = 'result-section';
@@ -523,13 +541,23 @@ const UIManager = {
         const outcomeContent = document.createElement('div');
         outcomeContent.className = 'result-content';
         if (isChameleon) {
-            outcomeContent.textContent = didWin
-                ? '🦎 You escaped detection as the Chameleon!'
-                : '🕵️ You were caught as the Chameleon.';
+            if (results.chameleonGuessedCorrectly) {
+                outcomeContent.textContent = '🦎 You guessed the secret word and escaped!';
+            } else if (results.chameleonGuessedWord && !results.chameleonGuessedCorrectly) {
+                outcomeContent.textContent = '🕵️ You were caught and your guess was wrong.';
+            } else if (didWin) {
+                outcomeContent.textContent = '🦎 You escaped detection as the Chameleon!';
+            } else {
+                outcomeContent.textContent = '🕵️ You were caught as the Chameleon.';
+            }
         } else {
-            outcomeContent.textContent = didWin
-                ? '🎉 Your team caught the Chameleon!'
-                : '😵 The Chameleon escaped this round.';
+            if (!results.chameleonCaught && results.chameleonGuessedCorrectly) {
+                outcomeContent.textContent = '😮 The Chameleon guessed the word and escaped at the last second!';
+            } else if (didWin) {
+                outcomeContent.textContent = '🎉 Your team caught the Chameleon!';
+            } else {
+                outcomeContent.textContent = '😵 The Chameleon escaped this round.';
+            }
         }
 
         outcomeBanner.appendChild(outcomeTitle);
@@ -567,6 +595,28 @@ const UIManager = {
         wordSection.appendChild(wordTitle);
         wordSection.appendChild(wordContent);
 
+        // Chameleon's final guess (if there was one)
+        let guessSection = null;
+        if (results.chameleonGuessedWord) {
+            guessSection = document.createElement('div');
+            guessSection.className = 'result-section';
+
+            const guessTitleEl = document.createElement('div');
+            guessTitleEl.className = 'result-title';
+            guessTitleEl.textContent = 'Chameleon\'s Final Guess:';
+
+            const guessContentEl = document.createElement('div');
+            guessContentEl.className = results.chameleonGuessedCorrectly
+                ? 'result-content result-guess-correct'
+                : 'result-content result-guess-wrong';
+            guessContentEl.textContent = results.chameleonGuessedCorrectly
+                ? `✅ "${results.chameleonGuessedWord}" — Correct!`
+                : `❌ "${results.chameleonGuessedWord}" — Wrong!`;
+
+            guessSection.appendChild(guessTitleEl);
+            guessSection.appendChild(guessContentEl);
+        }
+
         // Most voted
         const votedSection = document.createElement('div');
         votedSection.className = 'result-section';
@@ -582,7 +632,7 @@ const UIManager = {
         votedSection.appendChild(votedTitle);
         votedSection.appendChild(votedContent);
 
-        // Vote breakdown
+        // Vote breakdown with staggered reveal animation
         const voteBreakdownSection = document.createElement('div');
         voteBreakdownSection.className = 'result-section';
 
@@ -594,13 +644,18 @@ const UIManager = {
         voteBreakdownList.className = 'vote-breakdown-list';
 
         const voteDetails = Array.isArray(results.voteDetails) ? results.voteDetails : [];
-        voteDetails.forEach((detail) => {
+        voteDetails.forEach((detail, index) => {
             const row = document.createElement('div');
             row.className = 'vote-breakdown-item';
 
             const voterName = detail.voterId === GameState.playerId ? 'You' : (detail.voterName || 'Unknown');
             const votedName = detail.votedId === GameState.playerId ? 'You' : (detail.votedName || 'Unknown');
             row.textContent = `${voterName} → ${votedName}`;
+
+            // Staggered reveal animation
+            row.style.opacity = '0';
+            row.style.animation = `voteReveal 0.4s ease forwards`;
+            row.style.animationDelay = `${0.4 + index * 0.18}s`;
 
             voteBreakdownList.appendChild(row);
         });
@@ -618,8 +673,104 @@ const UIManager = {
         resultsDisplay.appendChild(outcomeBanner);
         resultsDisplay.appendChild(chameleonSection);
         resultsDisplay.appendChild(wordSection);
+        if (guessSection) resultsDisplay.appendChild(guessSection);
         resultsDisplay.appendChild(votedSection);
         resultsDisplay.appendChild(voteBreakdownSection);
+    },
+
+    // Show chameleon guess phase UI
+    showChameleonGuessPhase(isChameleon, deadlineAt) {
+        const container = document.getElementById('chameleon-guess-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (isChameleon) {
+            const title = document.createElement('div');
+            title.className = 'role-title role-chameleon';
+            title.textContent = '🦎 You\'ve been caught!';
+
+            const desc = document.createElement('div');
+            desc.className = 'role-description';
+            desc.textContent = 'Last chance to escape: guess the secret word. If you\'re right, you win!';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'chameleon-guess-input';
+            input.className = 'input-field';
+            input.placeholder = 'Type the secret word...';
+            input.maxLength = 60;
+            input.autocomplete = 'off';
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') GameManager.submitChameleonGuess();
+            });
+
+            const btn = document.createElement('button');
+            btn.id = 'submit-chameleon-guess-btn';
+            btn.className = 'btn btn-primary';
+            btn.textContent = 'Submit Guess';
+            btn.addEventListener('click', () => GameManager.submitChameleonGuess());
+
+            container.appendChild(title);
+            container.appendChild(desc);
+            container.appendChild(input);
+            container.appendChild(btn);
+        } else {
+            const title = document.createElement('div');
+            title.className = 'role-title';
+            title.textContent = '⚠️ The Chameleon was caught!';
+
+            const desc = document.createElement('div');
+            desc.className = 'chameleon-waiting-text';
+            desc.textContent = 'They\'ve been voted out, but they get one final chance to guess the secret word and escape...';
+
+            container.appendChild(title);
+            container.appendChild(desc);
+        }
+
+        const timerEl = document.createElement('div');
+        timerEl.className = 'chameleon-guess-timer';
+        timerEl.id = 'chameleon-guess-timer';
+        const initialSeconds = Math.max(0, Math.ceil((deadlineAt - Date.now()) / 1000));
+        timerEl.textContent = initialSeconds;
+        container.appendChild(timerEl);
+    },
+
+    // Update the chameleon guess countdown display
+    updateChameleonGuessTimer(seconds) {
+        const el = document.getElementById('chameleon-guess-timer');
+        if (el) {
+            el.textContent = seconds;
+            el.classList.toggle('urgent', seconds <= 5 && seconds > 0);
+        }
+    },
+
+    // Session score helpers (stored in sessionStorage)
+    getSessionScore() {
+        try {
+            return JSON.parse(sessionStorage.getItem('chamoScore') || '{"wins":0,"losses":0}');
+        } catch {
+            return { wins: 0, losses: 0 };
+        }
+    },
+
+    recordSessionResult(didWin) {
+        const score = this.getSessionScore();
+        if (didWin) score.wins++; else score.losses++;
+        sessionStorage.setItem('chamoScore', JSON.stringify(score));
+    },
+
+    updateScoreDisplay() {
+        const el = document.getElementById('session-score');
+        if (!el) return;
+        const { wins, losses } = this.getSessionScore();
+        const total = wins + losses;
+        if (total === 0) {
+            el.classList.add('hidden');
+            return;
+        }
+        el.textContent = `Session: ${wins}W — ${losses}L`;
+        el.classList.remove('hidden');
     },
 
     // Update results action buttons based on host role

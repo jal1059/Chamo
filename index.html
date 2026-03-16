@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <!-- Confetti Canvas (fixed overlay) -->
+    <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
     <!-- Main Container -->
     <div id="app" class="app-container">
         <!-- Welcome Screen -->
@@ -78,6 +81,7 @@
                     <div id="players-list" class="players-list">
                         <!-- Players will be added here dynamically -->
                     </div>
+                    <div id="session-score" class="session-score hidden"></div>
                 </div>
 
                 <div class="lobby-info">
@@ -180,6 +184,16 @@
             </div>
         </div>
 
+        <!-- Chameleon Guess Screen -->
+        <div id="chameleon-guess-screen" class="screen">
+            <div class="screen-content">
+                <h2 data-typewriter>Last Chance!</h2>
+                <div id="chameleon-guess-container" class="chameleon-guess-container">
+                    <!-- Content injected by UIManager -->
+                </div>
+            </div>
+        </div>
+
         <!-- Results Screen -->
         <div id="results-screen" class="screen">
             <div class="screen-content">
@@ -209,6 +223,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     
     <!-- App Scripts -->
+    <script src="js/confetti.js?v=20260214b"></script>
     <script src="js/config.js?v=20260214b"></script>
     <script src="js/utils.js?v=20260214b"></script>
     <script src="js/firebase-manager.js?v=20260214b"></script>

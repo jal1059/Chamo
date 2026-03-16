@@ -219,16 +219,19 @@ const LobbyManager = {
         if (status === 'voting') {
             GameManager.stopDiscussionTimer();
             GameManager.stopVotingLockCountdown();
+            GameManager.stopChameleonGuessTimer();
             this.handleVotingPhase(lobbyData, players);
         } else if (status === 'playing') {
             this.handlePlayingPhase(lobbyData, players);
         } else if (status === 'finished') {
             GameManager.stopDiscussionTimer();
             GameManager.stopVotingLockCountdown();
+            GameManager.stopChameleonGuessTimer();
             this.handleFinishedPhase(lobbyData);
         } else if (status === 'waiting') {
             GameManager.stopDiscussionTimer();
             GameManager.stopVotingLockCountdown();
+            GameManager.stopChameleonGuessTimer();
             this.currentVote = null;
             UIManager.updateLobbyCode(GameState.lobbyCode);
             UIManager.showScreen('lobby-screen');
@@ -269,6 +272,26 @@ const LobbyManager = {
         const game = lobbyData.game;
         const clueState = game?.clueState;
         const textClueModeEnabled = !!lobbyData?.settings?.textClueModeEnabled;
+
+        // Handle chameleon guess chance phase (higher priority than voting display)
+        if (game.chameleonGuessChance?.active) {
+            GameManager.stopDiscussionTimer();
+            const isChameleon = game.chameleonGuessChance.chameleonId === GameState.playerId;
+
+            if (GameState.currentScreen !== 'chameleon-guess-screen') {
+                UIManager.showScreen('chameleon-guess-screen');
+                UIManager.showChameleonGuessPhase(isChameleon, game.chameleonGuessChance.deadlineAt);
+            }
+
+            GameManager.startChameleonGuessTimer(game.chameleonGuessChance.deadlineAt);
+
+            // Host resolves as soon as a guess is submitted
+            if (GameState.isHost && game.chameleonGuessChance.guess !== null) {
+                GameManager.stopChameleonGuessTimer();
+                GameManager.resolveChameleonGuess();
+            }
+            return;
+        }
 
         // Handle player voting
         if (game.votingOpenedAt || game.playerVotes) {

@@ -10,6 +10,11 @@ const GameManager = {
     finalClueVotingTimer: null,
     finalClueCountdownTimer: null,
     finalClueVoteAt: null,
+    // Chameleon guess phase state
+    chameleonGuessTimer: null,
+    chameleonGuessTimerStarted: false,
+    resolvingChameleonGuess: false,
+    processingVotingResults: false,
 
     // Continue from role reveal to discussion
     async continueFromReveal() {
@@ -368,55 +373,160 @@ const GameManager = {
 
     // Process voting results (host only)
     async processVotingResults(votes, chameleonId, players) {
-        // Wait a moment for UI
-        await utils.sleep(1000);
+        if (this.processingVotingResults) return;
+        this.processingVotingResults = true;
 
-        // Count votes
-        const voteCounts = {};
-        Object.values(votes).forEach(votedId => {
-            voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
-        });
+        try {
+            // Wait a moment for UI
+            await utils.sleep(1000);
 
-        // Find player with most votes
-        let mostVotedId = Object.keys(voteCounts)[0];
-        let maxVotes = 0;
+            // Count votes
+            const voteCounts = {};
+            Object.values(votes).forEach(votedId => {
+                voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
+            });
 
-        Object.entries(voteCounts).forEach(([playerId, count]) => {
-            if (count > maxVotes) {
-                maxVotes = count;
-                mostVotedId = playerId;
+            // Find player with most votes
+            let mostVotedId = Object.keys(voteCounts)[0];
+            let maxVotes = 0;
+
+            Object.entries(voteCounts).forEach(([playerId, count]) => {
+                if (count > maxVotes) {
+                    maxVotes = count;
+                    mostVotedId = playerId;
+                }
+            });
+
+            // Determine if chameleon was caught
+            const chameleonCaught = mostVotedId === chameleonId;
+
+            // Get player names
+            const chameleonPlayer = players.find(p => p.id === chameleonId);
+            const votedPlayer = players.find(p => p.id === mostVotedId);
+            const playersById = new Map(players.map((player) => [player.id, player]));
+
+            const voteDetails = Object.entries(votes).map(([voterId, votedId]) => ({
+                voterId,
+                voterName: playersById.get(voterId)?.name || 'Unknown',
+                votedId,
+                votedName: playersById.get(votedId)?.name || 'Unknown'
+            }));
+
+            // Prepare results
+            const results = {
+                chameleonId: chameleonId,
+                chameleonName: chameleonPlayer?.name || 'Unknown',
+                mostVotedId: mostVotedId,
+                mostVotedName: votedPlayer?.name || 'Unknown',
+                chameleonCaught: chameleonCaught,
+                secretWord: GameState.lobbyData.game.secretWord,
+                votes: voteCounts,
+                voteDetails
+            };
+
+            // If the chameleon was caught, give them a final chance to guess the word
+            if (chameleonCaught) {
+                const guessDeadline = Date.now() + 15000;
+                await FirebaseManager.initiateChameleonGuessChance(
+                    GameState.lobbyCode,
+                    chameleonId,
+                    guessDeadline,
+                    results
+                );
+                return;
             }
-        });
 
-        // Determine if chameleon was caught
-        const chameleonCaught = mostVotedId === chameleonId;
+            // Chameleon escaped cleanly — publish results immediately
+            await FirebaseManager.setGameResults(GameState.lobbyCode, results);
+        } finally {
+            this.processingVotingResults = false;
+        }
+    },
 
-        // Get player names
-        const chameleonPlayer = players.find(p => p.id === chameleonId);
-        const votedPlayer = players.find(p => p.id === mostVotedId);
-        const playersById = new Map(players.map((player) => [player.id, player]));
+    // Start the chameleon guess phase countdown (all clients)
+    startChameleonGuessTimer(deadlineAt) {
+        if (this.chameleonGuessTimerStarted) return;
+        this.chameleonGuessTimerStarted = true;
 
-        const voteDetails = Object.entries(votes).map(([voterId, votedId]) => ({
-            voterId,
-            voterName: playersById.get(voterId)?.name || 'Unknown',
-            votedId,
-            votedName: playersById.get(votedId)?.name || 'Unknown'
-        }));
+        const tick = () => {
+            const remaining = Math.max(0, Math.ceil((deadlineAt - Date.now()) / 1000));
+            UIManager.updateChameleonGuessTimer(remaining);
 
-        // Prepare results
-        const results = {
-            chameleonId: chameleonId,
-            chameleonName: chameleonPlayer?.name || 'Unknown',
-            mostVotedId: mostVotedId,
-            mostVotedName: votedPlayer?.name || 'Unknown',
-            chameleonCaught: chameleonCaught,
-            secretWord: GameState.lobbyData.game.secretWord,
-            votes: voteCounts,
-            voteDetails
+            if (remaining <= 0) {
+                clearInterval(this.chameleonGuessTimer);
+                this.chameleonGuessTimer = null;
+                this.chameleonGuessTimerStarted = false;
+                // Host auto-resolves on timeout with no guess
+                if (GameState.isHost) {
+                    this.resolveChameleonGuess();
+                }
+            }
         };
 
-        // Set results in Firebase
-        await FirebaseManager.setGameResults(GameState.lobbyCode, results);
+        tick();
+        this.chameleonGuessTimer = setInterval(tick, 1000);
+    },
+
+    // Stop the chameleon guess countdown
+    stopChameleonGuessTimer() {
+        if (this.chameleonGuessTimer) {
+            clearInterval(this.chameleonGuessTimer);
+            this.chameleonGuessTimer = null;
+        }
+        this.chameleonGuessTimerStarted = false;
+    },
+
+    // Submit the chameleon's word guess
+    async submitChameleonGuess() {
+        const input = document.getElementById('chameleon-guess-input');
+        if (!input) return;
+
+        const guess = input.value.trim();
+        if (!guess) {
+            UIManager.showToast('Type your guess first!', 'error');
+            return;
+        }
+
+        input.disabled = true;
+        const btn = document.getElementById('submit-chameleon-guess-btn');
+        if (btn) btn.disabled = true;
+
+        const result = await FirebaseManager.submitChameleonGuess(GameState.lobbyCode, guess);
+        if (!result.success) {
+            UIManager.showToast('Failed to submit guess', 'error');
+            input.disabled = false;
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    // Host resolves the chameleon guess and finalises results
+    async resolveChameleonGuess() {
+        if (this.resolvingChameleonGuess) return;
+        this.resolvingChameleonGuess = true;
+
+        try {
+            const guessChance = GameState.lobbyData?.game?.chameleonGuessChance;
+            if (!guessChance || !guessChance.active) return;
+
+            const secretWord = GameState.lobbyData.game.secretWord;
+            const pendingResults = guessChance.pendingResults;
+            const guess = guessChance.guess;
+
+            // Case-insensitive comparison
+            const guessedCorrectly = typeof guess === 'string' &&
+                guess.trim().toLowerCase() === secretWord.toLowerCase();
+
+            const finalResults = {
+                ...pendingResults,
+                chameleonCaught: !guessedCorrectly,
+                chameleonGuessedWord: guess || null,
+                chameleonGuessedCorrectly: guessedCorrectly
+            };
+
+            await FirebaseManager.setGameResults(GameState.lobbyCode, finalResults);
+        } finally {
+            this.resolvingChameleonGuess = false;
+        }
     },
 
     // Play again (reset game)
@@ -428,6 +538,7 @@ const GameManager = {
 
         this.stopDiscussionTimer();
         this.stopVotingLockCountdown();
+        this.stopChameleonGuessTimer();
 
         UIManager.showLoading();
 
@@ -452,6 +563,7 @@ const GameManager = {
 
         this.stopDiscussionTimer();
         this.stopVotingLockCountdown();
+        this.stopChameleonGuessTimer();
 
         UIManager.showLoading();
         const result = await FirebaseManager.resetGame(GameState.lobbyCode);
@@ -469,6 +581,7 @@ const GameManager = {
     exitToMenu() {
         this.stopDiscussionTimer();
         this.stopVotingLockCountdown();
+        this.stopChameleonGuessTimer();
         LobbyManager.exitToMenu();
     }
 };

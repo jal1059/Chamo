@@ -558,5 +558,47 @@ const FirebaseManager = {
             console.error('Error resetting game:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    // Open a chameleon-guess window before finalising results
+    async initiateChameleonGuessChance(lobbyCode, chameleonId, deadlineAt, pendingResults) {
+        try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(
+                this.db.ref(`lobbies/${lobbyCode}/game/chameleonGuessChance`).set({
+                    active: true,
+                    chameleonId,
+                    deadlineAt,
+                    guess: null,
+                    pendingResults
+                }),
+                'Initiate chameleon guess chance'
+            );
+            return { success: true };
+        } catch (error) {
+            console.error('Error initiating chameleon guess chance:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Record the chameleon's word guess
+    async submitChameleonGuess(lobbyCode, guess) {
+        try {
+            if (!this.ensureDb()) {
+                return { success: false, error: 'Database is not initialized' };
+            }
+
+            await this.withTimeout(
+                this.db.ref(`lobbies/${lobbyCode}/game/chameleonGuessChance/guess`).set(guess),
+                'Submit chameleon guess'
+            );
+            return { success: true };
+        } catch (error) {
+            console.error('Error submitting chameleon guess:', error);
+            return { success: false, error: error.message };
+        }
     }
 };

@@ -1029,6 +1029,129 @@ h3 {
 }
 
 /* ===========================
+   Confetti Canvas
+   =========================== */
+
+#confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5000;
+}
+
+/* ===========================
+   Timer Urgency
+   =========================== */
+
+.timer-display.urgent span {
+    color: #ff4444;
+    animation: timer-pulse 0.65s ease-in-out infinite;
+    text-shadow: 0 0 14px rgba(255, 68, 68, 0.7);
+}
+
+@keyframes timer-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+/* ===========================
+   Chameleon Guess Screen
+   =========================== */
+
+.chameleon-guess-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg) 0;
+    text-align: center;
+}
+
+.chameleon-guess-container .input-field {
+    text-align: center;
+    font-size: 1.2rem;
+    letter-spacing: 0.05rem;
+}
+
+.chameleon-guess-container .btn {
+    max-width: 320px;
+}
+
+.chameleon-guess-timer {
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--secondary-color);
+    text-shadow: 0 0 14px var(--shadow);
+    min-width: 3.5rem;
+    text-align: center;
+    transition: color 0.3s ease;
+}
+
+.chameleon-guess-timer.urgent {
+    color: #ff4444;
+    animation: timer-pulse 0.65s ease-in-out infinite;
+    text-shadow: 0 0 14px rgba(255, 68, 68, 0.7);
+}
+
+.chameleon-waiting-text {
+    font-size: 1rem;
+    opacity: 0.85;
+    padding: var(--spacing-md);
+    background: rgba(0, 255, 102, 0.06);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(0, 255, 102, 0.22);
+    max-width: 320px;
+}
+
+/* ===========================
+   Vote Reveal Animation
+   =========================== */
+
+@keyframes voteReveal {
+    from {
+        opacity: 0;
+        transform: translateX(-14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ===========================
+   Session Score Display
+   =========================== */
+
+.session-score {
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--secondary-color);
+    padding: 0.4rem 0.8rem;
+    margin-top: var(--spacing-sm);
+    background: rgba(0, 255, 102, 0.07);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(0, 255, 102, 0.2);
+    letter-spacing: 0.04rem;
+}
+
+/* ===========================
+   Result Guess Row
+   =========================== */
+
+.result-guess-correct {
+    color: var(--secondary-color);
+    font-weight: 700;
+}
+
+.result-guess-wrong {
+    color: #ff6666;
+    font-weight: 700;
+}
+
+/* ===========================
    Utility Classes
    =========================== */
 
